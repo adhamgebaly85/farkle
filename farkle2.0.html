@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f0f12">
+<title>Farkle</title>
+<style>
+  :root {
+    --bg: #0f0f12;
+    --surface: #1a1a20;
+    --surface2: #22222a;
+    --surface3: #2a2a34;
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.14);
+    --text: #f0f0f4;
+    --text-muted: #7a7a8a;
+    --text-dim: #4a4a5a;
+    --accent: #6c63ff;
+    --accent-dim: rgba(108,99,255,0.15);
+    --accent-border: rgba(108,99,255,0.4);
+    --danger: #ff4f4f;
+    --danger-dim: rgba(255,79,79,0.12);
+    --success: #3ecf8e;
+    --success-dim: rgba(62,207,142,0.12);
+    --warning: #f5c542;
+    --warning-dim: rgba(245,197,66,0.15);
+    --warning-border: rgba(245,197,66,0.4);
+    --radius: 10px;
+    --radius-lg: 16px;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 15px;
+    min-height: 100dvh;
+    overscroll-behavior: none;
+  }
+
+  .screen { display: none; min-height: 100dvh; }
+  .screen.active { display: flex; flex-direction: column; }
+
+  /* ── SETUP ───────────────────────────────── */
+  #setup {
+    background: var(--bg);
+    align-items: center;
+    justify-content: flex-start;
+    overflow-y: auto;
+  }
+  .setup-inner {
+    width: 100%; max-width: 520px;
+    margin: 0 auto;
+    padding: 3rem 1.25rem 2rem;
+    display: flex; flex-direction: column; gap: 1rem;
+  }
+  .logo { text-align: center; margin-bottom: 0.5rem; }
+  .logo-title { font-size: clamp(2.2rem, 8vw, 3.2rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+  .logo-sub { font-size: 13px; color: var(--text-muted); margin-top: 6px; letter-spacing: 0.04em; }
+
+  .card { background: var(--surface); border: 0.5px solid var(--border-strong); border-radius: var(--radius-lg); padding: 1.25rem; }
+  .card-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 12px; }
+
+  .player-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+  .p-row { display: flex; gap: 8px; align-items: center; }
+  .p-row input {
+    flex: 1; background: var(--surface2); border: 0.5px solid var(--border-strong);
+    border-radius: var(--radius); color: var(--text); font-size: 15px; font-family: var(--font);
+    padding: 10px 14px; outline: none; -webkit-appearance: none;
+  }
+  .p-row input:focus { border-color: var(--accent); background: var(--surface3); }
+  .p-row input::placeholder { color: var(--text-dim); }
+  .p-row .del-btn {
+    width: 38px; height: 38px; background: var(--surface2); border: 0.5px solid var(--border);
+    border-radius: var(--radius); color: var(--text-muted); font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .p-row .del-btn:active { background: var(--danger-dim); color: var(--danger); }
+
+  .add-player-btn {
+    width: 100%; padding: 10px; background: transparent;
+    border: 0.5px dashed var(--border-strong); border-radius: var(--radius);
+    color: var(--text-muted); font-size: 14px; font-family: var(--font); cursor: pointer; margin-bottom: 4px;
+  }
+  .add-player-btn:active { background: var(--surface2); }
+
+  .start-btn {
+    width: 100%; padding: 14px; background: var(--accent); border: none;
+    border-radius: var(--radius); color: #fff; font-size: 15px; font-weight: 600;
+    font-family: var(--font); cursor: pointer; letter-spacing: 0.01em;
+  }
+  .start-btn:active { opacity: 0.85; transform: scale(0.98); }
+  .setup-err { font-size: 13px; color: var(--danger); text-align: center; margin-top: 4px; display: none; }
+
+  .ref-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+  .r-row { display: flex; justify-content: space-between; padding: 5px 8px; border-radius: 6px; font-size: 13px; }
+  .r-row:nth-child(odd) { background: var(--surface2); }
+  .rl { color: var(--text-muted); }
+  .rv { color: var(--accent); font-weight: 600; }
+
+  /* ── GAME ─────────────────────────────────── */
+  #game { background: var(--bg); flex-direction: column; overflow-y: auto; height: 100dvh; }
+
+  .game-layout {
+    display: flex; flex-direction: column; flex: 1;
+    width: 100%; min-height: 0;
+  }
+  @media (min-width: 680px) {
+    #game { overflow: hidden; }
+    .game-layout {
+      flex-direction: row; align-items: stretch;
+      padding: 0.75rem; gap: 0.75rem; flex: 1; overflow: hidden;
+    }
+    /* RIGHT: score input — 60% */
+    .game-right {
+      flex: 6; min-width: 0; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 0.75rem;
+    }
+    /* LEFT: scoreboard — 40% */
+    .game-left {
+      flex: 4; min-width: 0; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 0.75rem;
+    }
+  }
+
+  .game-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 16px 12px; border-bottom: 0.5px solid var(--border);
+    position: sticky; top: 0; background: var(--bg); z-index: 10;
+  }
+  .game-header-title { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; }
+
+  /* Last lap banner */
+  .last-lap-banner {
+    display: none;
+    background: var(--warning-dim);
+    border-bottom: 0.5px solid var(--warning-border);
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--warning);
+    text-align: center;
+    letter-spacing: 0.01em;
+  }
+  .last-lap-banner.visible { display: block; }
+
+  .new-game-btn {
+    font-size: 12px; color: var(--text-muted); background: var(--surface);
+    border: 0.5px solid var(--border-strong); border-radius: var(--radius);
+    padding: 6px 12px; cursor: pointer; font-family: var(--font);
+  }
+  .new-game-btn:active { background: var(--surface2); }
+
+  /* Panel blocks */
+  .panel-block {
+    background: var(--surface); border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border-strong); overflow: hidden;
+  }
+  .panel-title {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--text-muted);
+    padding: 9px 12px 8px; border-bottom: 0.5px solid var(--border);
+    background: var(--surface2);
+  }
+
+  /* Turn order */
+  .turn-order-list { display: flex; flex-direction: column; }
+  .to-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; border-bottom: 0.5px solid var(--border);
+  }
+  .to-row:last-child { border-bottom: none; }
+  .to-avatar {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; flex-shrink: 0;
+  }
+  .to-info { flex: 1; min-width: 0; }
+  .to-name { font-size: 13px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .to-seq { font-size: 10px; color: var(--text-dim); margin-top: 1px; }
+  .to-row.to-active .to-name { color: var(--text); font-weight: 600; }
+  .to-badge {
+    font-size: 10px; font-weight: 600; padding: 3px 8px;
+    border-radius: 20px; opacity: 0; white-space: nowrap;
+  }
+  .to-row.to-active .to-badge { opacity: 1; }
+
+  /* Scoreboard */
+  .scoreboard { display: flex; flex-direction: column; }
+  .sb-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-bottom: 0.5px solid var(--border);
+    position: relative; transition: background 0.2s;
+  }
+  .sb-row:last-child { border-bottom: none; }
+  .sb-row.sb-active { background: rgba(255,255,255,0.03); }
+  .sb-row.sb-reached { background: rgba(245,197,66,0.06); }
+
+  .sb-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+    position: relative;
+  }
+  .sb-avatar-ring {
+    position: absolute; inset: -2px; border-radius: 50%;
+    border: 2px solid transparent; transition: border-color 0.2s;
+  }
+  .sb-row.sb-active .sb-avatar-ring { border-color: rgba(255,255,255,0.5); }
+  .sb-row.sb-reached .sb-avatar-ring { border-color: var(--warning); }
+
+  .sb-mid { flex: 1; min-width: 0; }
+  .sb-namerow { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+  .sb-name { font-size: 13px; font-weight: 500; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sb-row.sb-active .sb-name { color: var(--text); font-weight: 600; }
+  .sb-rank { font-size: 10px; color: var(--text-dim); }
+  .sb-rank-1 { color: var(--warning); font-weight: 700; }
+
+  .sb-bar-wrap { height: 5px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+  .sb-bar { height: 100%; border-radius: 3px; transition: width 0.5s cubic-bezier(.4,0,.2,1); }
+
+  .sb-right { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; min-width: 54px; }
+  .sb-score { font-size: 14px; font-weight: 700; }
+  .sb-turns { font-size: 10px; color: var(--text-dim); margin-top: 1px; }
+
+  .crown-badge {
+    font-size: 10px; background: rgba(245,197,66,0.15); color: var(--warning);
+    border: 0.5px solid rgba(245,197,66,0.35); border-radius: 20px;
+    padding: 1px 6px; font-weight: 700; white-space: nowrap;
+  }
+
+  /* Turn panel */
+  .turn-panel { border-top: 0.5px solid var(--border); background: var(--surface); }
+  @media (min-width: 680px) {
+    .turn-panel { border: 0.5px solid var(--border-strong); border-radius: var(--radius-lg); flex: 1; }
+  }
+
+  .turn-head {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    padding: 12px 14px 10px; border-bottom: 0.5px solid var(--border);
+    background: var(--surface2); border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  .turn-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 2px; }
+  .turn-name { font-size: 16px; font-weight: 700; color: var(--accent); letter-spacing: -0.02em; }
+  .turn-meta { text-align: right; }
+  .turn-target { font-size: 11px; color: var(--text-dim); }
+  .turn-number { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+
+  /* Last lap indicator on turn panel */
+  .last-lap-turn-note {
+    display: none;
+    background: var(--warning-dim);
+    border-bottom: 0.5px solid var(--warning-border);
+    padding: 6px 14px;
+    font-size: 12px;
+    color: var(--warning);
+    font-weight: 500;
+    text-align: center;
+  }
+  .last-lap-turn-note.visible { display: block; }
+
+  .pts-display {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 14px 14px 10px; background: var(--surface);
+  }
+  @media (min-width: 680px) {
+    .pts-display { padding: 10px 14px 8px; }
+  }
+  .pts-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .pts-number {
+    font-size: clamp(2.4rem, 10vw, 3rem); font-weight: 700; letter-spacing: -0.04em;
+    color: var(--text-dim); line-height: 1; transition: color 0.2s;
+  }
+  .pts-number.live { color: var(--text); }
+  .pts-number.hot { color: var(--accent); }
+
+  .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 12px 12px; background: var(--surface); }
+  .btn-bust {
+    padding: 13px; background: var(--danger-dim); border: 0.5px solid var(--danger);
+    border-radius: var(--radius); color: var(--danger); font-size: 14px; font-weight: 600;
+    font-family: var(--font); cursor: pointer;
+  }
+  .btn-bust:active { background: var(--danger); color: #fff; }
+  .btn-bank {
+    padding: 13px; background: var(--success-dim); border: 0.5px solid var(--success);
+    border-radius: var(--radius); color: var(--success); font-size: 14px; font-weight: 600;
+    font-family: var(--font); cursor: pointer; transition: opacity 0.15s;
+  }
+  .btn-bank:active { background: var(--success); color: #fff; }
+  .btn-bank:disabled { opacity: 0.25; cursor: default; }
+  .btn-bank:disabled:active { background: var(--success-dim); color: var(--success); }
+
+  .farkle-bar {
+    background: var(--danger-dim); border-top: 0.5px solid var(--danger);
+    color: var(--danger); font-size: 12px; font-weight: 600;
+    text-align: center; padding: 8px; display: none; letter-spacing: 0.02em;
+  }
+
+  /* Chips */
+  .chips-section { padding: 12px 14px 14px; background: var(--surface); border-top: 0.5px solid var(--border); }
+  @media (min-width: 680px) { .chips-section { padding: 10px 12px 12px; } }
+  .chips-label {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--text-muted); margin-bottom: 8px; margin-top: 12px;
+  }
+  .chips-label:first-child { margin-top: 0; }
+  .chips-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .chips-grid.three-col { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (min-width: 680px) {
+    .chips-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .chips-grid.three-col { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  }
+
+  .chip {
+    background: var(--surface2); border: 0.5px solid var(--border-strong);
+    border-radius: var(--radius); padding: 8px 8px 7px; cursor: pointer;
+    text-align: left; -webkit-appearance: none; appearance: none;
+    font-family: var(--font); transition: background 0.1s, border-color 0.1s;
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .chip:active { background: var(--accent-dim); border-color: var(--accent-border); transform: scale(0.97); }
+  .chip-info { display: flex; justify-content: space-between; align-items: baseline; }
+  .chip-pts { font-size: 13px; font-weight: 700; color: var(--accent); line-height: 1; }
+  .chip-name { font-size: 10px; color: var(--text-muted); line-height: 1.2; }
+  .chip-dice { display: flex; gap: 3px; align-items: center; flex-wrap: wrap; }
+  .chip-dice svg { flex-shrink: 0; }
+  .chip.wide { grid-column: 1 / -1; padding: 8px 12px; flex-direction: row; align-items: center; gap: 12px; }
+  .chip.wide .chip-info { flex-direction: column; align-items: flex-start; gap: 1px; min-width: 80px; }
+  .chip.wide .chip-pts { font-size: 13px; }
+  .chip.wide .chip-name { font-size: 11px; margin-top: 0; }
+  .chip.wide .chip-dice { flex-wrap: nowrap; }
+
+  .custom-row { display: flex; gap: 6px; margin-top: 10px; }
+  .custom-input {
+    flex: 1; background: var(--surface2); border: 0.5px solid var(--border-strong);
+    border-radius: var(--radius); color: var(--text); font-size: 15px; font-family: var(--font);
+    padding: 10px 12px; outline: none; -webkit-appearance: none; min-width: 0;
+  }
+  .custom-input:focus { border-color: var(--accent); }
+  .custom-input::placeholder { color: var(--text-dim); }
+  .add-btn {
+    padding: 10px 16px; background: var(--accent); border: none; border-radius: var(--radius);
+    color: #fff; font-size: 14px; font-weight: 600; font-family: var(--font); cursor: pointer; flex-shrink: 0;
+  }
+  .add-btn:active { opacity: 0.8; }
+  .custom-err { font-size: 12px; color: var(--danger); margin-top: 5px; display: none; }
+
+  .undo-row { text-align: center; padding: 8px 0 2px; }
+  .undo-btn {
+    font-size: 12px; color: var(--text-muted); background: transparent;
+    border: none; cursor: pointer; font-family: var(--font); padding: 4px 8px; border-radius: 6px;
+  }
+  .undo-btn:active { background: var(--surface2); }
+  .undo-btn:disabled { opacity: 0.25; cursor: default; }
+
+  /* History */
+  .hist-card { overflow: hidden; }
+  .hist-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 0.5px solid var(--border); font-size: 13px; }
+  .hist-row:last-child { border-bottom: none; }
+  .hist-who { color: var(--text-muted); }
+  .hist-pts { font-weight: 600; }
+  .hist-pts.win { color: var(--success); }
+  .hist-pts.loss { color: var(--danger); }
+
+  /* ── WINNER ───────────────────────────────── */
+  #winner { background: var(--bg); align-items: center; justify-content: center; padding: 2rem 1.25rem; }
+  .winner-inner { width: 100%; max-width: 420px; text-align: center; }
+  .trophy-icon { font-size: 52px; line-height: 1; margin-bottom: 1rem; }
+  .winner-name { font-size: clamp(1.8rem, 8vw, 2.4rem); font-weight: 700; letter-spacing: -0.03em; margin-bottom: 4px; color: var(--warning); }
+  .winner-sub { font-size: 14px; color: var(--text-muted); margin-bottom: 2rem; }
+
+  .final-card { background: var(--surface); border: 0.5px solid var(--border-strong); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 1.5rem; text-align: left; }
+  .final-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 16px; border-bottom: 0.5px solid var(--border); font-size: 14px; }
+  .final-row:last-child { border-bottom: none; }
+  .final-row.top { background: var(--warning-dim); }
+  .final-row.top .final-name { color: var(--warning); font-weight: 600; }
+  .final-row.top .final-pts { color: var(--warning); font-weight: 700; }
+  .final-name { color: var(--text-muted); }
+  .final-pts { font-weight: 500; text-align: right; }
+  .final-pts small { display: block; font-size: 11px; color: var(--text-dim); font-weight: 400; }
+
+  .play-again-btn {
+    padding: 14px 40px; background: var(--accent); border: none; border-radius: var(--radius);
+    color: #fff; font-size: 15px; font-weight: 600; font-family: var(--font); cursor: pointer; letter-spacing: 0.01em;
+  }
+  .play-again-btn:active { opacity: 0.85; transform: scale(0.98); }
+
+  /* ── SETTINGS OVERLAY ────────────────────────────────── */
+  .settings-overlay {
+    display: none; position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.6); align-items: center; justify-content: center;
+    padding: 1rem;
+  }
+  .settings-overlay.open { display: flex; }
+  .settings-modal {
+    background: var(--surface); border: 0.5px solid var(--border-strong);
+    border-radius: var(--radius-lg); width: 100%; max-width: 400px;
+    overflow: hidden;
+  }
+  .settings-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 16px; border-bottom: 0.5px solid var(--border);
+    background: var(--surface2);
+  }
+  .settings-header-title { font-size: 15px; font-weight: 600; }
+  .settings-close {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: transparent; border: 0.5px solid var(--border-strong);
+    color: var(--text-muted); font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font); line-height: 1;
+  }
+  .settings-close:hover { background: var(--surface3); }
+  .settings-body { padding: 1rem; display: flex; flex-direction: column; gap: 1px; }
+  .settings-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 14px; border-radius: var(--radius);
+    background: var(--surface2); border: 0.5px solid var(--border);
+    margin-bottom: 6px;
+  }
+  .settings-row:last-child { margin-bottom: 0; }
+  .settings-label { font-size: 13px; font-weight: 500; }
+  .settings-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .settings-control { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .settings-val {
+    font-size: 14px; font-weight: 700; min-width: 52px; text-align: center;
+    color: var(--accent);
+  }
+  .s-btn {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--surface3); border: 0.5px solid var(--border-strong);
+    color: var(--text); font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font); line-height: 1;
+  }
+  .s-btn:hover { background: var(--accent-dim); border-color: var(--accent-border); color: var(--accent); }
+  .s-btn:disabled { opacity: 0.25; cursor: default; }
+  .settings-toggle {
+    width: 42px; height: 24px; border-radius: 12px;
+    background: var(--surface3); border: 0.5px solid var(--border-strong);
+    cursor: pointer; position: relative; transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .settings-toggle.on { background: var(--accent); border-color: var(--accent); }
+  .settings-toggle::after {
+    content: ''; position: absolute; top: 3px; left: 3px;
+    width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    transition: transform 0.2s;
+  }
+  .settings-toggle.on::after { transform: translateX(18px); }
+  .settings-footer { padding: 0 1rem 1rem; }
+  .settings-save {
+    width: 100%; padding: 11px; background: var(--accent); border: none;
+    border-radius: var(--radius); color: #fff; font-size: 14px; font-weight: 600;
+    font-family: var(--font); cursor: pointer;
+  }
+  .settings-save:hover { opacity: 0.9; }
+
+  /* Settings button in header */
+  .settings-btn {
+    font-size: 12px; color: var(--text-muted); background: var(--surface);
+    border: 0.5px solid var(--border-strong); border-radius: var(--radius);
+    padding: 6px 12px; cursor: pointer; font-family: var(--font);
+  }
+  .settings-btn:hover { background: var(--surface2); }
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div class="screen active" id="setup">
+  <div class="setup-inner">
+    <div class="logo">
+      <div class="logo-title">Farkle</div>
+      <div class="logo-sub">Score tracker · First to <span id='target-display'>10,000</span></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Players</div>
+      <div class="player-rows" id="plist"></div>
+      <button class="add-player-btn" onclick="addPRowSilent('')">+ Add player</button>
+      <button class="start-btn" onclick="startGame()">Start game</button>
+      <div class="setup-err" id="setup-err"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Scoring reference</div>
+      <div class="ref-grid">
+        <div class="r-row"><span class="rl">Single 1</span><span class="rv">100</span></div>
+        <div class="r-row"><span class="rl">Single 5</span><span class="rv">50</span></div>
+        <div class="r-row"><span class="rl">Three 1s</span><span class="rv">1,000</span></div>
+        <div class="r-row"><span class="rl">Three 2s</span><span class="rv">200</span></div>
+        <div class="r-row"><span class="rl">Three 3s</span><span class="rv">300</span></div>
+        <div class="r-row"><span class="rl">Three 4s</span><span class="rv">400</span></div>
+        <div class="r-row"><span class="rl">Three 5s</span><span class="rv">500</span></div>
+        <div class="r-row"><span class="rl">Three 6s</span><span class="rv">600</span></div>
+        <div class="r-row"><span class="rl">Four of a kind</span><span class="rv">2× three</span></div>
+        <div class="r-row"><span class="rl">Five of a kind</span><span class="rv">3× three</span></div>
+        <div class="r-row"><span class="rl">Six of a kind</span><span class="rv">4× three</span></div>
+        <div class="r-row"><span class="rl">Straight 1–6</span><span class="rv">1,500</span></div>
+        <div class="r-row"><span class="rl">Three pairs</span><span class="rv">750</span></div>
+        <div class="r-row"><span class="rl">Two triplets</span><span class="rv">2,500</span></div>
+        <div class="r-row"><span class="rl">Four + pair</span><span class="rv">1,500</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GAME -->
+<div class="screen" id="game">
+  <div class="game-header">
+    <div class="game-header-title">Farkle</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="settings-btn" onclick="openSettings()">⚙ Settings</button>
+      <button class="new-game-btn" onclick="goSetup()">New game</button>
+    </div>
+  </div>
+
+  <!-- Settings overlay -->
+  <div class="settings-overlay" id="settings-overlay" onclick="if(event.target===this)closeSettings()">
+    <div class="settings-modal">
+      <div class="settings-header">
+        <div class="settings-header-title">Game settings</div>
+        <button class="settings-close" onclick="closeSettings()">×</button>
+      </div>
+      <div class="settings-body">
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Target score</div>
+            <div class="settings-sub">First player to reach this wins the round</div>
+          </div>
+          <div class="settings-control">
+            <button class="s-btn" onclick="adjSetting('target',-1000)" id="target-dn">−</button>
+            <div class="settings-val" id="target-val">10,000</div>
+            <button class="s-btn" onclick="adjSetting('target',+1000)" id="target-up">+</button>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Minimum to bank</div>
+            <div class="settings-sub">Points needed before banking a turn</div>
+          </div>
+          <div class="settings-control">
+            <button class="s-btn" onclick="adjSetting('minBank',-50)" id="minbank-dn">−</button>
+            <div class="settings-val" id="minbank-val">0</div>
+            <button class="s-btn" onclick="adjSetting('minBank',+50)" id="minbank-up">+</button>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Max undo steps</div>
+            <div class="settings-sub">Cross-turn undos allowed per game</div>
+          </div>
+          <div class="settings-control">
+            <button class="s-btn" onclick="adjSetting('maxUndo',-1)" id="undo-dn">−</button>
+            <div class="settings-val" id="undo-val">3</div>
+            <button class="s-btn" onclick="adjSetting('maxUndo',+1)" id="undo-up">+</button>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Last-lap rule</div>
+            <div class="settings-sub">Everyone finishes the round when target is hit</div>
+          </div>
+          <div class="settings-control">
+            <div class="settings-toggle on" id="lastlap-toggle" onclick="toggleSetting('lastLap')"></div>
+          </div>
+        </div>
+
+      </div>
+      <div class="settings-footer">
+        <button class="settings-save" onclick="closeSettings()">Done</button>
+      </div>
+    </div>
+  </div>
+  <div class="last-lap-banner" id="last-lap-banner"></div>
+
+  <div class="game-layout">
+    <div class="game-right">
+      <div class="turn-panel">
+        <div class="turn-head">
+          <div>
+            <div class="turn-label">Current turn</div>
+            <div class="turn-name" id="turn-name">—</div>
+          </div>
+          <div class="turn-meta">
+            <div class="turn-number" id="turn-number"></div>
+            <div class="turn-target" id="turn-target-label">to 10,000</div>
+          </div>
+        </div>
+        <div class="last-lap-turn-note" id="last-lap-turn-note"></div>
+
+        <div class="pts-display">
+          <div class="pts-label">Points this turn</div>
+          <div class="pts-number" id="pts-num">0</div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn-bust" onclick="doFarkle()">✕ Farkle (bust)</button>
+          <button class="btn-bank" id="bank-btn" onclick="doBank()" disabled>✓ Bank turn</button>
+        </div>
+        <div class="farkle-bar" id="farkle-bar">Farkled! All points lost.</div>
+
+        <div class="chips-section">
+
+          <div class="chips-label">Single dice</div>
+          <div class="chips-grid">
+
+            <button class="chip" onclick="addPts(100)">
+              <div class="chip-info"><span class="chip-pts">+100</span><span class="chip-name">Single 1</span></div>
+              <div class="chip-dice">D(1)</div>
+            </button>
+
+            <button class="chip" onclick="addPts(50)">
+              <div class="chip-info"><span class="chip-pts">+50</span><span class="chip-name">Single 5</span></div>
+              <div class="chip-dice">D(5)</div>
+            </button>
+
+          </div>
+
+          <div class="chips-label">Three of a kind</div>
+          <div class="chips-grid three-col">
+
+            <button class="chip" onclick="addPts(1000)">
+              <div class="chip-info"><span class="chip-pts">+1,000</span><span class="chip-name">Three 1s</span></div>
+              <div class="chip-dice">D(1)D(1)D(1)</div>
+            </button>
+
+            <button class="chip" onclick="addPts(200)">
+              <div class="chip-info"><span class="chip-pts">+200</span><span class="chip-name">Three 2s</span></div>
+              <div class="chip-dice">D(2)D(2)D(2)</div>
+            </button>
+
+            <button class="chip" onclick="addPts(300)">
+              <div class="chip-info"><span class="chip-pts">+300</span><span class="chip-name">Three 3s</span></div>
+              <div class="chip-dice">D(3)D(3)D(3)</div>
+            </button>
+
+            <button class="chip" onclick="addPts(400)">
+              <div class="chip-info"><span class="chip-pts">+400</span><span class="chip-name">Three 4s</span></div>
+              <div class="chip-dice">D(4)D(4)D(4)</div>
+            </button>
+
+            <button class="chip" onclick="addPts(500)">
+              <div class="chip-info"><span class="chip-pts">+500</span><span class="chip-name">Three 5s</span></div>
+              <div class="chip-dice">D(5)D(5)D(5)</div>
+            </button>
+
+            <button class="chip" onclick="addPts(600)">
+              <div class="chip-info"><span class="chip-pts">+600</span><span class="chip-name">Three 6s</span></div>
+              <div class="chip-dice">D(6)D(6)D(6)</div>
+            </button>
+
+          </div>
+
+          <div class="chips-label">Special combos</div>
+          <div class="chips-grid">
+
+            <button class="chip" onclick="addPts(750)">
+              <div class="chip-info"><span class="chip-pts">+750</span><span class="chip-name">Three pairs</span></div>
+              <div class="chip-dice">D(2)D(2)D(4)D(4)D(6)D(6)</div>
+            </button>
+
+            <button class="chip" onclick="addPts(1500)">
+              <div class="chip-info"><span class="chip-pts">+1,500</span><span class="chip-name">Straight 1–6</span></div>
+              <div class="chip-dice">D(1)D(2)D(3)D(4)D(5)D(6)</div>
+            </button>
+
+            <button class="chip" onclick="addPts(1000)">
+              <div class="chip-info"><span class="chip-pts">+1,000</span><span class="chip-name">Four of a kind</span></div>
+              <div class="chip-dice">D(3)D(3)D(3)D(3)</div>
+            </button>
+
+            <button class="chip" onclick="addPts(2000)">
+              <div class="chip-info"><span class="chip-pts">+2,000</span><span class="chip-name">Five of a kind</span></div>
+              <div class="chip-dice">D(4)D(4)D(4)D(4)D(4)</div>
+            </button>
+
+            <button class="chip" onclick="addPts(3000)">
+              <div class="chip-info"><span class="chip-pts">+3,000</span><span class="chip-name">Six of a kind</span></div>
+              <div class="chip-dice">D(2)D(2)D(2)D(2)D(2)D(2)</div>
+            </button>
+
+            <button class="chip" onclick="addPts(2500)">
+              <div class="chip-info"><span class="chip-pts">+2,500</span><span class="chip-name">Two triplets</span></div>
+              <div class="chip-dice">D(3)D(3)D(3)D(5)D(5)D(5)</div>
+            </button>
+
+          </div>
+          <div class="chips-grid" style="margin-top:6px">
+
+            <button class="chip wide" onclick="addPts(1500)">
+              <div class="chip-info"><span class="chip-pts">+1,500</span><span class="chip-name">Four of a kind + pair</span></div>
+              <div class="chip-dice">D(6)D(6)D(6)D(6)D(3)D(3)</div>
+            </button>
+
+          </div>
+
+          <div class="chips-label">Custom</div>
+          <div class="custom-row">
+            <input class="custom-input" id="custom-input" type="number" placeholder="Enter points…" min="1" step="50"
+              oninput="document.getElementById('custom-err').style.display='none'"
+              onkeydown="if(event.key==='Enter')addCustom()">
+            <button class="add-btn" onclick="addCustom()">Add</button>
+          </div>
+          <div class="custom-err" id="custom-err">Enter a valid number.</div>
+          <div class="undo-row">
+            <button class="undo-btn" id="undo-btn" onclick="undoLast()" disabled>↩ Undo last</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="game-left">
+
+      <div class="panel-block">
+        <div class="panel-title">Turn order</div>
+        <div class="turn-order-list" id="turn-order-list"></div>
+      </div>
+
+      <div class="panel-block">
+        <div class="panel-title">Leaderboard</div>
+        <div class="scoreboard" id="scoreboard"></div>
+      </div>
+
+      <div class="panel-block" id="history-section" style="display:none">
+        <div class="panel-title">Recent turns</div>
+        <div class="hist-card" id="history-list"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- WINNER -->
+<div class="screen" id="winner">
+  <div class="winner-inner">
+    <div class="trophy-icon">🏆</div>
+    <div class="winner-name" id="winner-name">—</div>
+    <div class="winner-sub" id="winner-sub">wins!</div>
+    <div class="final-card" id="final-card"></div>
+    <button class="play-again-btn" onclick="goSetup()">Play again</button>
+  </div>
+</div>
+
+<script>
+  // ── State ─────────────────────────────────
+  let players = [], scores = [], turns = [], curIdx = 0;
+  let turnPts = 0, ptHistory = [], gameHistory = [];
+  let inLastLap = false, lastLapTriggerIdx = -1, lastLapFinishedPlayers = 0;
+
+  // ── Settings (user-configurable) ────────────
+  const SETTINGS = {
+    target:   10000,   // winning score
+    minBank:  0,       // minimum points to bank a turn
+    maxUndo:  3,       // max cross-turn undo steps
+    lastLap:  true,    // everyone finishes the round when target is hit
+  };
+
+  // Stack of cross-turn snapshots (size governed by SETTINGS.maxUndo)
+  let snapshots = [];
+
+  // Kept for label display only — replaced by SETTINGS.maxUndo at runtime
+  function maxSnapshotsAllowed() { return SETTINGS.maxUndo; }
+
+  // ── Screen routing ─────────────────────────
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  // ── Setup ──────────────────────────────────
+  function addPRowSilent(name) {
+    const list = document.getElementById('plist');
+    if (list.children.length >= 8) return;
+    const idx = list.children.length;
+    const row = document.createElement('div');
+    row.className = 'p-row';
+    row.innerHTML = `<input type="text" placeholder="Player ${idx + 1}" value="${name}" maxlength="16" autocomplete="off"><button class="del-btn" onclick="this.parentElement.remove()" aria-label="Remove player">×</button>`;
+    list.appendChild(row);
+  }
+
+  function startGame() {
+    const inputs = document.querySelectorAll('#plist input');
+    const names = Array.from(inputs).map((inp, i) => inp.value.trim() || `Player ${i + 1}`);
+    const err = document.getElementById('setup-err');
+    if (names.length < 2) { err.style.display = 'block'; err.textContent = 'Add at least 2 players.'; return; }
+    err.style.display = 'none';
+    players = names; scores = names.map(() => 0); turns = names.map(() => 0);
+    curIdx = 0; gameHistory = []; snapshots = [];
+    inLastLap = false; lastLapTriggerIdx = -1; lastLapFinishedPlayers = 0;
+    beginTurn(); renderScoreboard(); renderTurnOrder(); show('game');
+  }
+
+  function goSetup() {
+    document.getElementById('plist').innerHTML = '';
+    ['Figo', 'Adham', 'Dody', 'Emma'].forEach(n => addPRowSilent(n));
+    show('setup');
+  }
+
+  // ── Snapshot helpers ───────────────────────
+  // Push a full game-state snapshot before each terminal action (Bank / Farkle).
+  // Keeps at most MAX_SNAPSHOTS entries; oldest falls off the bottom.
+  function saveSnapshot() {
+    snapshots.unshift({
+      scores: [...scores],
+      turns: [...turns],
+      curIdx,
+      turnPts,
+      ptHistory: [...ptHistory],
+      gameHistory: gameHistory.map(h => ({ ...h })),
+      inLastLap,
+      lastLapTriggerIdx,
+      lastLapFinishedPlayers,
+    });
+    if (snapshots.length > SETTINGS.maxUndo) snapshots.pop();
+  }
+
+  // Pop the most recent snapshot and restore state from it.
+  function restoreSnapshot() {
+    if (!snapshots.length) return;
+    const s = snapshots.shift();
+    scores = [...s.scores];
+    turns = [...s.turns];
+    curIdx = s.curIdx;
+    turnPts = s.turnPts;
+    ptHistory = [...s.ptHistory];
+    gameHistory = s.gameHistory.map(h => ({ ...h }));
+    inLastLap = s.inLastLap;
+    lastLapTriggerIdx = s.lastLapTriggerIdx;
+    lastLapFinishedPlayers = s.lastLapFinishedPlayers;
+  }
+
+  // ── Turn logic ─────────────────────────────
+  function beginTurn() {
+    turnPts = 0; ptHistory = [];
+    const _tc = playerColor(curIdx);
+    const _tn = document.getElementById('turn-name');
+    _tn.textContent = players[curIdx];
+    _tn.style.color = _tc.text;
+    document.getElementById('turn-number').textContent = `Turn ${turns[curIdx] + 1}`;
+    document.getElementById('farkle-bar').style.display = 'none';
+    document.getElementById('custom-input').value = '';
+    document.getElementById('custom-err').style.display = 'none';
+    refreshDisplay();
+    updateLastLapUI();
+    // Undo button is available at start of a new turn if there's a snapshot to revert
+    document.getElementById('undo-btn').disabled = !snapshots.length;
+    updateUndoLabel();
+  }
+
+  function addPts(n) {
+    ptHistory.push(n); turnPts += n;
+    document.getElementById('undo-btn').disabled = false;
+    updateUndoLabel();
+    refreshDisplay();
+  }
+
+  function addCustom() {
+    const inp = document.getElementById('custom-input');
+    const v = parseInt(inp.value);
+    const err = document.getElementById('custom-err');
+    if (!inp.value || isNaN(v) || v <= 0) { err.style.display = 'block'; return; }
+    err.style.display = 'none'; addPts(v); inp.value = '';
+  }
+
+  // Undo: within a turn pops the last chip; at start of turn reverts the entire previous action.
+  function undoLast() {
+    if (ptHistory.length > 0) {
+      // Within-turn undo: remove last chip addition
+      turnPts -= ptHistory.pop();
+      document.getElementById('undo-btn').disabled = ptHistory.length === 0 && !snapshots.length;
+      updateUndoLabel();
+      refreshDisplay();
+    } else if (snapshots.length) {
+      // Cross-turn undo: pop snapshot and restore previous player's turn
+      restoreSnapshot();
+      document.getElementById('farkle-bar').style.display = 'none';
+      const _utc = playerColor(curIdx);
+      const _utn = document.getElementById('turn-name');
+      _utn.textContent = players[curIdx];
+      _utn.style.color = _utc.text;
+      document.getElementById('turn-number').textContent = `Turn ${turns[curIdx] + 1}`;
+      refreshDisplay();
+      renderScoreboard();
+      renderHistory();
+      document.getElementById('undo-btn').disabled = ptHistory.length === 0 && !snapshots.length;
+      updateUndoLabel();
+    }
+  }
+
+  function updateUndoLabel() {
+    const btn = document.getElementById('undo-btn');
+    if (ptHistory.length > 0) {
+      btn.textContent = '↩ Undo last addition';
+    } else if (snapshots.length) {
+      const who = players[snapshots[0].curIdx];
+      btn.textContent = `↩ Undo ${who}'s turn (${snapshots.length} of ${SETTINGS.maxUndo})`;
+    } else {
+      btn.textContent = '↩ Undo last';
+    }
+  }
+
+  function refreshDisplay() {
+    const el = document.getElementById('pts-num');
+    el.textContent = turnPts.toLocaleString();
+    el.className = 'pts-number' + (turnPts >= 1000 ? ' hot' : turnPts > 0 ? ' live' : '');
+    document.getElementById('bank-btn').disabled = turnPts < SETTINGS.minBank;
+  }
+
+  function doFarkle() {
+    saveSnapshot();
+    document.getElementById('farkle-bar').style.display = 'block';
+    gameHistory.unshift({ who: players[curIdx], pts: 0, farkle: true, turn: turns[curIdx] + 1 });
+    turns[curIdx]++;
+    if (inLastLap && curIdx !== lastLapTriggerIdx) lastLapFinishedPlayers++;
+    renderScoreboard(); renderHistory();
+    setTimeout(() => { advanceTurn(); }, 1400);
+  }
+
+  function doBank() {
+    if (turnPts < SETTINGS.minBank) return;
+    saveSnapshot();
+    scores[curIdx] += turnPts;
+    turns[curIdx]++;
+    gameHistory.unshift({ who: players[curIdx], pts: turnPts, farkle: false, turn: turns[curIdx] });
+
+    if (!inLastLap && scores[curIdx] >= SETTINGS.target) {
+      if (SETTINGS.lastLap) {
+        inLastLap = true; lastLapTriggerIdx = curIdx; lastLapFinishedPlayers = 0;
+      } else {
+        renderScoreboard(); renderHistory(); showWinner(); return;
+      }
+    } else if (inLastLap && curIdx !== lastLapTriggerIdx) {
+      lastLapFinishedPlayers++;
+    }
+
+    renderScoreboard(); renderHistory();
+
+    if (inLastLap && isLastLapComplete()) { showWinner(); return; }
+    advanceTurn();
+  }
+
+  function playersAfterTrigger() { return players.length - lastLapTriggerIdx - 1; }
+  function isLastLapComplete() { return lastLapFinishedPlayers >= playersAfterTrigger(); }
+
+  function advanceTurn() {
+    curIdx = (curIdx + 1) % players.length;
+    if (inLastLap && curIdx === lastLapTriggerIdx) { showWinner(); return; }
+    beginTurn(); renderScoreboard();
+  }
+
+  // ── Last lap UI ─────────────────────────────
+  function updateLastLapUI() {
+    const banner = document.getElementById('last-lap-banner');
+    const note = document.getElementById('last-lap-turn-note');
+    if (!inLastLap) {
+      banner.classList.remove('visible');
+      note.classList.remove('visible');
+      return;
+    }
+    const triggerName = players[lastLapTriggerIdx];
+    const triggerScore = scores[lastLapTriggerIdx].toLocaleString();
+    banner.textContent = `🏁 Last round — ${triggerName} hit ${triggerScore} pts. Everyone finishes their turn.`;
+    banner.classList.add('visible');
+    if (curIdx !== lastLapTriggerIdx) {
+      note.textContent = `Final turn — beat ${triggerScore} to win!`;
+      note.classList.add('visible');
+    } else {
+      note.classList.remove('visible');
+    }
+  }
+
+  // ── Render ─────────────────────────────────
+  // Per-player color palette — each player gets a unique vivid color
+  const PLAYER_COLORS = [
+    { bg: 'rgba(108,99,255,0.22)', text: '#a09bff', bar: '#6c63ff', ring: '#6c63ff' },  // violet
+    { bg: 'rgba(62,207,142,0.20)', text: '#3ecf8e', bar: '#3ecf8e', ring: '#3ecf8e' },  // emerald
+    { bg: 'rgba(255,107,107,0.22)', text: '#ff8a8a', bar: '#ff6b6b', ring: '#ff6b6b' }, // coral
+    { bg: 'rgba(255,190,11,0.20)',  text: '#ffd040', bar: '#ffbe0b', ring: '#ffbe0b' }, // amber
+    { bg: 'rgba(0,210,255,0.18)',   text: '#4dd8f0', bar: '#00d2ff', ring: '#00d2ff' }, // cyan
+    { bg: 'rgba(255,100,200,0.20)', text: '#ff90d8', bar: '#ff64c8', ring: '#ff64c8' }, // pink
+    { bg: 'rgba(120,220,60,0.20)',  text: '#90e040', bar: '#78dc3c', ring: '#78dc3c' }, // lime
+    { bg: 'rgba(255,140,50,0.22)',  text: '#ffaa60', bar: '#ff8c32', ring: '#ff8c32' }, // orange
+  ];
+
+  function playerColor(i) { return PLAYER_COLORS[i % PLAYER_COLORS.length]; }
+
+  function initials(name) {
+    const parts = name.trim().split(/\s+/);
+    return parts.length >= 2
+      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      : name.slice(0, 2).toUpperCase();
+  }
+
+  function renderScoreboard() {
+    const sb = document.getElementById('scoreboard');
+    const rankMap = {};
+    [...scores].map((s, i) => ({ s, i }))
+      .sort((a, b) => b.s - a.s)
+      .forEach(({ i }, rank) => { rankMap[i] = rank + 1; });
+
+    const sorted = players
+      .map((p, i) => ({ p, i, s: scores[i], t: turns[i] }))
+      .sort((a, b) => b.s - a.s);
+
+    sb.innerHTML = sorted.map(({ p, i, s, t }) => {
+      const pct = Math.min(100, Math.round((s / SETTINGS.target) * 100));
+      const isActive = i === curIdx;
+      const reached = s >= SETTINGS.target;
+      const rank = rankMap[i];
+      const c = playerColor(i);
+      const cls = 'sb-row' + (isActive ? ' sb-active' : '') + (reached ? ' sb-reached' : '');
+      const rankLabel = rank === 1 ? '<span class="sb-rank sb-rank-1">🥇</span>'
+                      : rank === 2 ? '<span class="sb-rank">🥈</span>'
+                      : rank === 3 ? '<span class="sb-rank">🥉</span>'
+                      : `<span class="sb-rank">#${rank}</span>`;
+      const crown = reached ? ' <span class="crown-badge">🏁 done</span>' : '';
+      return `<div class="${cls}">
+        <div class="sb-avatar" style="background:${c.bg}; color:${c.text}">
+          ${initials(p)}
+          <div class="sb-avatar-ring" style="${isActive || reached ? 'border-color:' + c.ring : ''}"></div>
+        </div>
+        <div class="sb-mid">
+          <div class="sb-namerow">
+            ${rankLabel}
+            <span class="sb-name">${p}${crown}</span>
+          </div>
+          <div class="sb-bar-wrap">
+            <div class="sb-bar" style="width:${reached ? 100 : pct}%; background:${c.bar}"></div>
+          </div>
+        </div>
+        <div class="sb-right">
+          <div class="sb-score" style="color:${c.text}">${s.toLocaleString()}</div>
+          <div class="sb-turns">T${t}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    renderTurnOrder();
+    updateLastLapUI();
+  }
+
+  function renderTurnOrder() {
+    const el = document.getElementById('turn-order-list');
+    if (!el) return;
+    el.innerHTML = players.map((p, i) => {
+      const active = i === curIdx;
+      const c = playerColor(i);
+      return `<div class="to-row${active ? ' to-active' : ''}">
+        <div class="to-avatar" style="background:${c.bg}; color:${c.text}">${initials(p)}</div>
+        <div class="to-info">
+          <div class="to-name">${p}</div>
+          <div class="to-seq">Player ${i + 1}</div>
+        </div>
+        <div class="to-badge" style="background:${c.bg}; color:${c.text}">▶ now</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderHistory() {
+    const section = document.getElementById('history-section');
+    const list = document.getElementById('history-list');
+    const recent = gameHistory.slice(0, 6);
+    if (!recent.length) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    list.innerHTML = recent.map(h => {
+      const pi = players.indexOf(h.who);
+      const c = pi >= 0 ? playerColor(pi) : { bg: 'transparent', text: 'var(--text-muted)', bar: '' };
+      return `<div class="hist-row">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:20px;height:20px;border-radius:50%;background:${c.bg};color:${c.text};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0">${initials(h.who)}</div>
+          <span class="hist-who">${h.who} · T${h.turn}</span>
+        </div>
+        <span class="hist-pts ${h.farkle ? 'loss' : 'win'}" style="${!h.farkle ? 'color:' + c.text : ''}">${h.farkle ? 'Farkle!' : '+' + h.pts.toLocaleString()}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function showWinner() {
+    const sorted = players
+      .map((p, i) => ({ p, s: scores[i], t: turns[i] }))
+      .sort((a, b) => b.s - a.s || a.t - b.t);
+    const w = sorted[0];
+    document.getElementById('winner-name').textContent = w.p;
+    document.getElementById('winner-sub').textContent =
+      `wins with ${w.s.toLocaleString()} points in ${w.t} turns!`;
+    document.getElementById('final-card').innerHTML = sorted.map((x, i) =>
+      `<div class="final-row${i === 0 ? ' top' : ''}">
+        <span class="final-name">${i === 0 ? '🏆 ' : ''}${x.p}</span>
+        <span class="final-pts">${x.s.toLocaleString()} pts<small>${x.t} turns</small></span>
+      </div>`
+    ).join('');
+    show('winner');
+  }
+
+  // ── Settings panel ─────────────────────────
+  function openSettings() {
+    syncSettingsUI();
+    document.getElementById('settings-overlay').classList.add('open');
+  }
+  function closeSettings() {
+    document.getElementById('settings-overlay').classList.remove('open');
+    // Update all live labels that reflect settings
+    const tl = document.getElementById('turn-target-label');
+    if (tl) tl.textContent = 'to ' + SETTINGS.target.toLocaleString();
+    const td = document.getElementById('target-display');
+    if (td) td.textContent = SETTINGS.target.toLocaleString();
+    // re-render bank button state with new minimum
+    refreshDisplay();
+  }
+
+  function syncSettingsUI() {
+    document.getElementById('target-val').textContent   = SETTINGS.target.toLocaleString();
+    document.getElementById('minbank-val').textContent  = SETTINGS.minBank.toLocaleString();
+    document.getElementById('undo-val').textContent     = SETTINGS.maxUndo;
+    const llToggle = document.getElementById('lastlap-toggle');
+    llToggle.classList.toggle('on', SETTINGS.lastLap);
+    // button limits
+    document.getElementById('target-dn').disabled  = SETTINGS.target <= 1000;
+    document.getElementById('target-up').disabled  = SETTINGS.target >= 50000;
+    document.getElementById('minbank-dn').disabled = SETTINGS.minBank <= 0;
+    document.getElementById('minbank-up').disabled = SETTINGS.minBank >= 2000;
+    document.getElementById('undo-dn').disabled    = SETTINGS.maxUndo <= 0;
+    document.getElementById('undo-up').disabled    = SETTINGS.maxUndo >= 10;
+  }
+
+  function adjSetting(key, delta) {
+    if (key === 'target')  { SETTINGS.target  = Math.max(1000,  Math.min(50000, SETTINGS.target  + delta)); }
+    if (key === 'minBank') { SETTINGS.minBank = Math.max(0,     Math.min(2000,  SETTINGS.minBank + delta)); }
+    if (key === 'maxUndo') { SETTINGS.maxUndo = Math.max(0,     Math.min(10,    SETTINGS.maxUndo + delta)); }
+    syncSettingsUI();
+  }
+
+  function toggleSetting(key) {
+    SETTINGS[key] = !SETTINGS[key];
+    syncSettingsUI();
+  }
+
+  // ── SVG Dice ───────────────────────────────
+  // Dot positions for each face value on a 20x20 grid
+  const DOT_POS = {
+    1: [[10,10]],
+    2: [[5,5],[15,15]],
+    3: [[5,5],[10,10],[15,15]],
+    4: [[5,5],[15,5],[5,15],[15,15]],
+    5: [[5,5],[15,5],[10,10],[5,15],[15,15]],
+    6: [[5,4],[15,4],[5,10],[15,10],[5,16],[15,16]]
+  };
+
+  function makeDieSVG(value, size) {
+    const s = size || 20;
+    const scale = s / 20;
+    const r = 2.5 * scale;
+    const dots = (DOT_POS[value] || []).map(([x, y]) =>
+      `<circle cx="${x * scale}" cy="${y * scale}" r="${r}" fill="#5c2e00"/>`
+    ).join('');
+    return `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;flex-shrink:0">
+      <rect width="${s}" height="${s}" rx="${2.5 * scale}" fill="#e8900a" stroke="#c97208" stroke-width="0.8"/>
+      ${dots}
+    </svg>`;
+  }
+
+  function renderDiceChips() {
+    document.querySelectorAll('.chip-dice').forEach(el => {
+      // Replace D(n) tokens with SVG dice
+      const size = el.closest('.chip.wide') ? 16 : 14;
+      el.innerHTML = el.innerHTML.replace(/D\((\d)\)/g, (_, n) => makeDieSVG(+n, size));
+    });
+  }
+
+  // ── Init ───────────────────────────────────
+  ['Figo', 'Adham', 'Dody', 'Emma'].forEach(n => addPRowSilent(n));
+  renderDiceChips();
+</script>
+</body>
+</html>
