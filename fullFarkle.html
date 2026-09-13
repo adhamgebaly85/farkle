@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#07090e">
+<title>Farkle Master Pro</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  body { font-family:'Inter',sans-serif; background-color:#07090e; color:#f8fafc; user-select:none; -webkit-tap-highlight-color:transparent; }
+  ::-webkit-scrollbar{width:5px;height:5px}
+  ::-webkit-scrollbar-track{background:rgba(15,23,42,0.6)}
+  ::-webkit-scrollbar-thumb{background:rgba(51,65,85,0.8);border-radius:3px}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(245,158,11,0.6)}
+
+  @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:0.4}}
+  .pulse-dot{animation:pulse-dot 1.8s ease-in-out infinite}
+  @keyframes slide-in{from{transform:translateY(-12px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .slide-in{animation:slide-in 0.25s ease}
+  @keyframes bounce-in{0%{transform:scale(0.7);opacity:0}80%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+  .bounce-in{animation:bounce-in 0.45s cubic-bezier(.4,0,.2,1)}
+  .last-lap-bar{background:linear-gradient(90deg,rgba(245,158,11,0.15),rgba(245,158,11,0.05))}
+  .prog-fill{transition:width 0.5s cubic-bezier(.4,0,.2,1)}
+
+  /* ── DICE ── */
+  @keyframes die-spin {
+    0%   { transform: rotateX(0deg)   rotateY(0deg)   rotateZ(0deg); }
+    25%  { transform: rotateX(180deg) rotateY(90deg)  rotateZ(45deg); }
+    50%  { transform: rotateX(360deg) rotateY(180deg) rotateZ(90deg); }
+    75%  { transform: rotateX(270deg) rotateY(270deg) rotateZ(135deg); }
+    100% { transform: rotateX(360deg) rotateY(360deg) rotateZ(180deg); }
+  }
+  .die-wrap { perspective: 200px; }
+  .die {
+    width: 80px; height: 80px;
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    position: relative;
+    border: 2.5px solid rgba(255,255,255,0.08);
+    background: #1a1d2e;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  .die:active { transform: scale(0.92); }
+  .die.rolling { animation: die-spin 0.1s linear infinite; cursor: default; opacity: 0.65; }
+  .die.kept {
+    background: rgba(245,158,11,0.12);
+    border-color: #f59e0b;
+    box-shadow: 0 0 18px rgba(245,158,11,0.35), 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .die.scoring {
+    background: rgba(108,99,255,0.18);
+    border-color: #7c6fff;
+    box-shadow: 0 0 20px rgba(108,99,255,0.45), 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .die.farkled { opacity: 0.3; cursor: default; }
+  .die.used { opacity: 0.2; cursor: default; border-style: dashed; border-color: rgba(255,255,255,0.1); }
+  @keyframes farkle-flash { 0%,100%{background:#1a1d2e} 50%{background:rgba(239,68,68,0.3)} }
+  .farkle-flash { animation: farkle-flash 0.25s ease 3; }
+  .die-face { pointer-events: none; display: block; width: 100%; height: 100%; }
+
+  /* Mode selector card hover */
+  .mode-card { transition: border-color 0.2s, background 0.2s, transform 0.15s; }
+  .mode-card:hover { transform: translateY(-2px); }
+  .mode-card:active { transform: scale(0.98); }
+</style>
+</head>
+<body class="h-full flex flex-col antialiased overflow-x-hidden">
+
+<!-- ═══════════════════ HEADER ═══════════════════ -->
+<header class="bg-slate-900/95 backdrop-blur-md border-b border-slate-800/80 px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow-xl">
+  <div class="flex items-center space-x-3">
+    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shadow-lg shadow-amber-500/25 text-slate-950 font-black text-xl">
+      <i class="fa-solid fa-dice"></i>
+    </div>
+    <div>
+      <h1 class="font-extrabold text-sm sm:text-base text-slate-100 tracking-tight flex items-center space-x-2">
+        <span>FARKLE MASTER</span>
+        <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold">Pro</span>
+      </h1>
+      <p id="modeLabel" class="text-[11px] text-slate-500 hidden sm:block">Score Tracker</p>
+    </div>
+  </div>
+  <div class="flex items-center space-x-2">
+    <button onclick="openSettingsModal()" class="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition text-xs font-semibold flex items-center space-x-1.5 active:scale-95">
+      <i class="fa-solid fa-gear text-amber-400"></i>
+      <span class="hidden sm:inline">Settings</span>
+    </button>
+    <button onclick="confirmNewGame()" class="px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition text-xs font-semibold flex items-center space-x-1.5 active:scale-95">
+      <i class="fa-solid fa-rotate-right"></i>
+      <span class="hidden sm:inline">New Game</span>
+    </button>
+  </div>
+</header>
+
+<!-- Last-lap banner -->
+<div id="lastLapBanner" class="hidden last-lap-bar border-b border-amber-500/25 px-4 py-2 text-center text-xs font-semibold text-amber-400 tracking-wide slide-in">
+  <i class="fa-solid fa-flag-checkered mr-1.5"></i><span id="lastLapText"></span>
+</div>
+
+<!-- ═══════════════════ MAIN ═══════════════════ -->
+<main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 lg:p-5 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 pb-16">
+
+  <!-- ── LEFT COLUMN (4/12) ── -->
+  <section class="lg:col-span-4 flex flex-col space-y-4">
+
+    <!-- Turn Order -->
+    <div class="bg-slate-900/90 border border-slate-800/90 rounded-2xl overflow-hidden shadow-xl">
+      <div class="px-4 py-2.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/40">
+        <h2 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
+          <i class="fa-solid fa-list-ol text-amber-400 text-xs"></i><span>Turn Order</span>
+        </h2>
+        <button onclick="openAddPlayerModal()" class="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[11px] transition flex items-center space-x-1 active:scale-95">
+          <i class="fa-solid fa-user-plus text-[10px]"></i><span>Add</span>
+        </button>
+      </div>
+      <div id="turnOrderList" class="divide-y divide-slate-800/60 max-h-56 overflow-y-auto"></div>
+    </div>
+
+    <!-- Leaderboard -->
+    <div class="bg-slate-900/90 border border-slate-800/90 rounded-2xl overflow-hidden shadow-xl">
+      <div class="px-4 py-2.5 border-b border-slate-800 bg-slate-950/40">
+        <h2 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
+          <i class="fa-solid fa-trophy text-amber-400 text-xs"></i><span>Leaderboard</span>
+        </h2>
+      </div>
+      <div id="leaderboard" class="divide-y divide-slate-800/60"></div>
+    </div>
+
+    <!-- Recent Turns -->
+    <div class="bg-slate-900/90 border border-slate-800/90 rounded-2xl overflow-hidden shadow-xl">
+      <div class="px-4 py-2.5 border-b border-slate-800 bg-slate-950/40">
+        <h2 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
+          <i class="fa-solid fa-clock-rotate-left text-amber-400 text-xs"></i><span>Recent Turns</span>
+        </h2>
+      </div>
+      <div id="recentTurns" class="divide-y divide-slate-800/60 max-h-44 overflow-y-auto">
+        <p class="text-xs text-slate-500 px-4 py-3 italic">No turns yet.</p>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── RIGHT COLUMN (8/12) ── -->
+  <section class="lg:col-span-8 flex flex-col space-y-4">
+
+    <!-- Active player banner (shared) -->
+    <div class="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 shadow-xl">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-3">
+          <div id="activeDot" class="w-3 h-3 rounded-full bg-amber-400 pulse-dot flex-shrink-0"></div>
+          <div>
+            <span class="text-[11px] uppercase text-slate-500 font-semibold tracking-wider">Active Roller</span>
+            <h3 id="activePlayerName" class="text-base sm:text-lg font-extrabold text-slate-100">—</h3>
+          </div>
+        </div>
+        <div class="text-right">
+          <span class="text-[11px] uppercase text-slate-500 font-semibold tracking-wider">Total Score</span>
+          <div id="activePlayerScore" class="text-lg sm:text-xl font-black text-amber-400">0 pts</div>
+        </div>
+      </div>
+
+      <!-- Points this turn -->
+      <div class="bg-slate-950/70 rounded-xl p-3.5 border border-slate-800 flex items-center justify-between mb-4">
+        <div>
+          <span class="text-[11px] text-slate-500 block font-medium uppercase tracking-wide">Points this turn</span>
+          <div class="flex items-baseline space-x-1">
+            <span id="turnScoreDisplay" class="text-3xl sm:text-4xl font-black text-amber-400 tracking-tight">0</span>
+            <span class="text-sm text-slate-500">pts</span>
+          </div>
+          <div id="minBankNote" class="text-[11px] text-slate-600 mt-0.5"></div>
+        </div>
+        <!-- Clear only shown in tracker mode -->
+        <button id="clearTurnBtn" onclick="resetTurnScore()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-xs font-semibold transition active:scale-95">
+          <i class="fa-solid fa-xmark mr-1"></i>Clear
+        </button>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="grid grid-cols-3 gap-2.5">
+        <button onclick="triggerFarkle()" id="farkleBtn" class="py-3 px-2 rounded-xl bg-red-600/90 hover:bg-red-500 text-white font-bold text-xs tracking-wide shadow-lg shadow-red-900/30 border border-red-500/40 transition active:scale-95 flex flex-col items-center justify-center space-y-1">
+          <i class="fa-solid fa-triangle-exclamation text-sm"></i>
+          <span>Farkle (bust)</span>
+        </button>
+        <button id="bankBtn" onclick="bankTurnScore()" class="py-3 px-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs tracking-wide shadow-lg shadow-amber-500/25 border border-amber-400/50 transition active:scale-95 flex flex-col items-center justify-center space-y-1">
+          <i class="fa-solid fa-vault text-sm"></i>
+          <span>Bank turn</span>
+        </button>
+        <button onclick="undoLastAction()" id="undoBtn" class="py-3 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/80 text-slate-200 transition text-xs font-semibold flex flex-col items-center justify-center space-y-1 shadow-lg active:scale-95">
+          <i class="fa-solid fa-rotate-left text-amber-400 text-sm"></i>
+          <span id="undoBtnLabel">Undo</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ TRACKER MODE panel ══ -->
+    <div id="trackerPanel" class="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col space-y-5">
+
+      <div>
+        <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center space-x-1.5">
+          <i class="fa-solid fa-dice-one text-amber-400 text-xs"></i><span>Single Dice</span>
+        </h4>
+        <div class="grid grid-cols-2 gap-2.5">
+          <button onclick="addPoints(100,'Single 1')" class="group bg-slate-950/80 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/60 rounded-xl p-3 text-left transition flex items-center justify-between shadow-md active:scale-95">
+            <div><span class="block text-xs text-slate-400 group-hover:text-slate-300 font-medium">Single 1</span><span class="text-base sm:text-lg font-black text-amber-400">+100</span></div>
+            <div class="w-9 h-9 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center text-amber-400 text-xl"><i class="fa-solid fa-dice-one"></i></div>
+          </button>
+          <button onclick="addPoints(50,'Single 5')" class="group bg-slate-950/80 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/60 rounded-xl p-3 text-left transition flex items-center justify-between shadow-md active:scale-95">
+            <div><span class="block text-xs text-slate-400 group-hover:text-slate-300 font-medium">Single 5</span><span class="text-base sm:text-lg font-black text-amber-400">+50</span></div>
+            <div class="w-9 h-9 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center text-amber-400 text-xl"><i class="fa-solid fa-dice-five"></i></div>
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center space-x-1.5">
+          <i class="fa-solid fa-dice text-amber-400 text-xs"></i><span>Three of a Kind</span>
+        </h4>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+          <button onclick="addPoints(1000,'Three 1s')" class="group bg-slate-950/80 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/60 rounded-xl p-3 text-left transition flex items-center justify-between shadow-md active:scale-95"><div><span class="block text-xs text-slate-400 font-medium">Three 1s</span><span class="text-sm sm:text-base font-black text-amber-400">+1,000</span></div><div class="flex space-x-0.5 text-amber-400 text-sm"><i class="fa-solid fa-dice-one"></i><i class="fa-solid fa-dice-one"></i><i class="fa-solid fa-dice-one"></i></div></button>
+          <button onclick="addPoints(200,'Three 2s')" class="group bg-slate-950/80 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/60 rounded-xl p-3 text-left transition flex items-center justify-between shadow-md active:scale-95"><div><span class="block text-xs text-slate-400 font-medium">Three 2s</span><span class="text-sm sm:text-base font-black text-amber-400">+200</span></div><div class="flex space-x-0.5 text-amber-400 text-sm"><i class="fa-solid fa-dice-two"></i><i class="fa-solid fa-dice-two"></i><i class="fa-solid fa-dice-two"></i></div></button>
+          <button onclick="addPoints(300,'Three 3s')" class="group bg-slate-950/80 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/60 rounded-xl p-3 text-left transition flex items-center justify-between shadow-md active:scale-95"><div><span class="block text-xs text-slate-400 font-medium">Three 3s</span><span class="text-sm sm:text-base font-black text-amber-400">+300</span></div><div class="flex space-x-0.5 text-amber-400 text-sm"><i class="fa-solid fa-dice-three"></i><i class="fa-solid fa-dice-three"></i><i class="fa-solid fa-dice-three"></i></div></button>
+          <button onclick="addPoints(400,'Three 4s')" class="group bg-slate-950/80 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/60 rounded-xl p-3 text-left transition flex items-center justify-between shadow-md active:scale-95"><div><span class="block text-xs text-slate-400 font-medium">Three 4s</span><span class="text-sm sm:text-base font-black text-amber-400">+400</span></div><div class="flex space-x-0.5 text-amber-400 text-sm"><i class="fa-solid fa-dice-four"></i><i class="fa-solid fa-dice-four"></i><i class="fa-solid fa-dice-four"></i></div></button>
+          <button onclick="addPoints(500,'Three 5s')" class="group bg-slate-950/80 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/60 rounded-xl p-3 text-left transition flex items-center justify-between shadow-md active:scale-95"><div><span class="block text-xs text-slate-400 font-medium">Three 5s</span><span class="text-sm sm:text-base font-black text-amber-400">+500</span></div><div class="flex space-x-0.5 text-amber-400 text-sm"><i class="fa-solid fa-dice-five"></i><i class="fa-solid fa-dice-five"></i><i class="fa-solid fa-dice-five"></i></div></button>
+          <button onclick="addPoints(600,'Three 6s')" class="group bg-slate-950/80 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/60 rounded-xl p-3 text-left transition flex items-center justify-between shadow-md active:scale-95"><div><span class="block text-xs text-slate-400 font-medium">Three 6s</span><span class="text-sm sm:text-base font-black text-amber-400">+600</span></div><div class="flex space-x-0.5 text-amber-400 text-sm"><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i></div></button>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center space-x-1.5">
+          <i class="fa-solid fa-star text-amber-400 text-xs"></i><span>Special Combinations</span>
+        </h4>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+          <button onclick="addPoints(750,'Three Pairs')" class="group bg-slate-950/80 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/60 rounded-xl p-3 text-left transition flex items-center justify-between shadow-md active:scale-95"><div><span class="block text-xs text-slate-400 font-medium">Three Pairs</span><span class="text-sm sm:text-base font-black text-amber-400">+750</span></div><div class="flex space-x-0.5 text-amber-400/80 text-xs"><i class="fa-solid fa-dice-two"></i><i class="fa-solid fa-dice-two"></i><i class="fa-solid fa-dice-four"></i><i class="fa-solid fa-dice-four"></i></div></button>
+          <button onclick="addPoints(1500,'Straight 1-6')" class="group bg-slate-950/80 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/60 rounded-xl p-3 text-left transition flex items-center justify-between shadow-md active:scale-95"><div><span class="block text-xs text-slate-400 font-medium">Straight 1–6</span><span class="text-sm sm:text-base font-black text-amber-400">+1,500</span></div><div class="flex space-x-0.5 text-amber-400/80 text-[10px]"><i class="fa-solid fa-dice-one"></i><i class="fa-solid fa-dice-two"></i><i class="fa-solid fa-dice-three"></i><i class="fa-solid fa-dice-four"></i><i class="fa-solid fa-dice-five"></i><i class="fa-solid fa-dice-six"></i></div></button>
+          <button onclick="addPoints(1000,'Four of a Kind')" class="group bg-slate-950/80 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/60 rounded-xl p-3 text-left transition flex items-center justify-between shadow-md active:scale-95"><div><span class="block text-xs text-slate-400 font-medium">Four of a Kind</span><span class="text-sm sm:text-base font-black text-amber-400">+1,000</span></div><div class="flex space-x-0.5 text-amber-400/80 text-xs"><i class="fa-solid fa-dice-four"></i><i class="fa-solid fa-dice-four"></i><i class="fa-solid fa-dice-four"></i><i class="fa-solid fa-dice-four"></i></div></button>
+          <button onclick="addPoints(2000,'Five of a Kind')" class="group bg-slate-950/80 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/60 rounded-xl p-3 text-left transition flex items-center justify-between shadow-md active:scale-95"><div><span class="block text-xs text-slate-400 font-medium">Five of a Kind</span><span class="text-sm sm:text-base font-black text-amber-400">+2,000</span></div><div class="flex space-x-0.5 text-amber-400/80 text-[10px]"><i class="fa-solid fa-dice-five"></i><i class="fa-solid fa-dice-five"></i><i class="fa-solid fa-dice-five"></i><i class="fa-solid fa-dice-five"></i><i class="fa-solid fa-dice-five"></i></div></button>
+          <button onclick="addPoints(3000,'Six of a Kind')" class="group bg-slate-950/80 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/60 rounded-xl p-3 text-left transition flex items-center justify-between shadow-md active:scale-95"><div><span class="block text-xs text-slate-400 font-medium">Six of a Kind</span><span class="text-sm sm:text-base font-black text-amber-400">+3,000</span></div><div class="flex space-x-0.5 text-amber-400/80 text-[10px]"><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i></div></button>
+          <button onclick="addPoints(2500,'Two Triplets')" class="group bg-slate-950/80 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/60 rounded-xl p-3 text-left transition flex items-center justify-between shadow-md active:scale-95"><div><span class="block text-xs text-slate-400 font-medium">Two Triplets</span><span class="text-sm sm:text-base font-black text-amber-400">+2,500</span></div><div class="flex space-x-0.5 text-amber-400/80 text-[10px]"><i class="fa-solid fa-dice-three"></i><i class="fa-solid fa-dice-three"></i><i class="fa-solid fa-dice-three"></i><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i></div></button>
+        </div>
+        <div class="mt-2.5">
+          <button onclick="addPoints(1500,'Four of a Kind + Pair')" class="w-full group bg-slate-950/80 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/60 rounded-xl p-3 text-left transition flex items-center justify-between shadow-md active:scale-95"><div><span class="block text-xs text-slate-400 font-medium">Four of a Kind + Pair</span><span class="text-sm sm:text-base font-black text-amber-400">+1,500</span></div><div class="flex space-x-0.5 text-amber-400/80 text-[10px]"><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-three"></i><i class="fa-solid fa-dice-three"></i></div></button>
+        </div>
+      </div>
+
+      <div class="pt-4 border-t border-slate-800/80 flex items-center space-x-3">
+        <input type="number" id="customPointsInput" placeholder="Enter custom points…" min="1"
+          onkeydown="if(event.key==='Enter')addCustomPoints()"
+          class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-600 text-sm focus:outline-none focus:border-amber-500 transition">
+        <button onclick="addCustomPoints()" class="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 transition font-bold text-sm flex items-center space-x-2 shrink-0 active:scale-95">
+          <i class="fa-solid fa-plus"></i><span>Add</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ DICE GAME MODE panel ══ -->
+    <div id="dicePanel" class="hidden bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col space-y-5">
+
+      <!-- Combo result banner -->
+      <div id="comboBanner" class="hidden bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-3 flex items-center justify-between">
+        <div>
+          <div class="text-[10px] uppercase text-slate-500 font-semibold tracking-wider mb-0.5">Detected combo</div>
+          <div id="comboLabel" class="text-sm font-bold text-purple-400">—</div>
+        </div>
+        <div class="text-right">
+          <div class="text-[10px] uppercase text-slate-500 font-semibold tracking-wider mb-0.5">Combo score</div>
+          <div id="comboScore" class="text-lg font-black text-purple-400">+0</div>
+        </div>
+      </div>
+
+      <!-- 6 Dice -->
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
+            <i class="fa-solid fa-dice text-amber-400 text-xs"></i><span>Dice</span>
+          </h4>
+          <div id="diceStatusLabel" class="text-[11px] text-slate-500 font-medium">Press Roll to start</div>
+        </div>
+        <div class="grid grid-cols-3 sm:grid-cols-6 gap-3" id="diceGrid"></div>
+      </div>
+
+      <!-- Hot dice notice -->
+      <div id="hotDiceNotice" class="hidden bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-2.5 text-center">
+        <span class="text-amber-400 font-bold text-sm">🔥 Hot Dice! All 6 kept — roll again with a fresh set!</span>
+      </div>
+
+      <!-- Farkle notice -->
+      <div id="farkleNotice" class="hidden bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+        <span class="text-red-400 font-bold text-sm">💀 Farkle! No scoring dice — turn lost.</span>
+        <button onclick="confirmFarkleAndAdvance()" class="flex-shrink-0 px-4 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-white font-bold text-xs transition active:scale-95 flex items-center space-x-1.5">
+          <i class="fa-solid fa-arrow-right text-xs"></i><span>Next player</span>
+        </button>
+      </div>
+
+      <!-- Roll / Keep & Roll buttons -->
+      <div class="grid grid-cols-2 gap-3">
+        <button id="rollBtn" onclick="rollDice()"
+          class="py-4 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/25 transition active:scale-95 flex items-center justify-center space-x-2">
+          <i class="fa-solid fa-dice text-lg"></i>
+          <span id="rollBtnLabel">Roll Dice</span>
+        </button>
+        <button id="keepRollBtn" onclick="keepAndRoll()" disabled
+          class="py-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold text-sm transition active:scale-95 flex items-center justify-center space-x-2 disabled:opacity-30 disabled:cursor-not-allowed">
+          <i class="fa-solid fa-arrow-rotate-right text-amber-400"></i>
+          <span>Keep & Roll Again</span>
+        </button>
+      </div>
+
+      <!-- Scoring reference — always visible -->
+      <div class="pt-4 border-t border-slate-800/80">
+        <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center space-x-1.5">
+          <i class="fa-solid fa-book-open text-amber-400 text-xs"></i><span>Scoring Reference</span>
+        </h4>
+
+        <!-- Single dice -->
+        <div class="mb-3">
+          <div class="text-[10px] uppercase tracking-wider text-slate-600 font-semibold mb-1.5">Single dice</div>
+          <div class="grid grid-cols-2 gap-1.5">
+            <div class="flex items-center justify-between bg-slate-950/60 hover:bg-slate-950/80 border border-slate-800/60 rounded-lg px-3 py-2 transition">
+              <div class="flex items-center space-x-2"><i class="fa-solid fa-dice-one text-amber-400 text-sm"></i><span class="text-xs text-slate-300">Single 1</span></div>
+              <span class="text-xs font-black text-amber-400">100</span>
+            </div>
+            <div class="flex items-center justify-between bg-slate-950/60 hover:bg-slate-950/80 border border-slate-800/60 rounded-lg px-3 py-2 transition">
+              <div class="flex items-center space-x-2"><i class="fa-solid fa-dice-five text-amber-400 text-sm"></i><span class="text-xs text-slate-300">Single 5</span></div>
+              <span class="text-xs font-black text-amber-400">50</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Three of a kind -->
+        <div class="mb-3">
+          <div class="text-[10px] uppercase tracking-wider text-slate-600 font-semibold mb-1.5">Three of a kind</div>
+          <div class="grid grid-cols-2 gap-1.5">
+            <div class="flex items-center justify-between bg-slate-950/60 border border-slate-800/60 rounded-lg px-3 py-2">
+              <div class="flex items-center space-x-2"><div class="flex space-x-0.5"><i class="fa-solid fa-dice-one text-amber-400 text-xs"></i><i class="fa-solid fa-dice-one text-amber-400 text-xs"></i><i class="fa-solid fa-dice-one text-amber-400 text-xs"></i></div><span class="text-xs text-slate-300">Three 1s</span></div>
+              <span class="text-xs font-black text-amber-400">1,000</span>
+            </div>
+            <div class="flex items-center justify-between bg-slate-950/60 border border-slate-800/60 rounded-lg px-3 py-2">
+              <div class="flex items-center space-x-2"><div class="flex space-x-0.5"><i class="fa-solid fa-dice-two text-amber-400 text-xs"></i><i class="fa-solid fa-dice-two text-amber-400 text-xs"></i><i class="fa-solid fa-dice-two text-amber-400 text-xs"></i></div><span class="text-xs text-slate-300">Three 2s</span></div>
+              <span class="text-xs font-black text-amber-400">200</span>
+            </div>
+            <div class="flex items-center justify-between bg-slate-950/60 border border-slate-800/60 rounded-lg px-3 py-2">
+              <div class="flex items-center space-x-2"><div class="flex space-x-0.5"><i class="fa-solid fa-dice-three text-amber-400 text-xs"></i><i class="fa-solid fa-dice-three text-amber-400 text-xs"></i><i class="fa-solid fa-dice-three text-amber-400 text-xs"></i></div><span class="text-xs text-slate-300">Three 3s</span></div>
+              <span class="text-xs font-black text-amber-400">300</span>
+            </div>
+            <div class="flex items-center justify-between bg-slate-950/60 border border-slate-800/60 rounded-lg px-3 py-2">
+              <div class="flex items-center space-x-2"><div class="flex space-x-0.5"><i class="fa-solid fa-dice-four text-amber-400 text-xs"></i><i class="fa-solid fa-dice-four text-amber-400 text-xs"></i><i class="fa-solid fa-dice-four text-amber-400 text-xs"></i></div><span class="text-xs text-slate-300">Three 4s</span></div>
+              <span class="text-xs font-black text-amber-400">400</span>
+            </div>
+            <div class="flex items-center justify-between bg-slate-950/60 border border-slate-800/60 rounded-lg px-3 py-2">
+              <div class="flex items-center space-x-2"><div class="flex space-x-0.5"><i class="fa-solid fa-dice-five text-amber-400 text-xs"></i><i class="fa-solid fa-dice-five text-amber-400 text-xs"></i><i class="fa-solid fa-dice-five text-amber-400 text-xs"></i></div><span class="text-xs text-slate-300">Three 5s</span></div>
+              <span class="text-xs font-black text-amber-400">500</span>
+            </div>
+            <div class="flex items-center justify-between bg-slate-950/60 border border-slate-800/60 rounded-lg px-3 py-2">
+              <div class="flex items-center space-x-2"><div class="flex space-x-0.5"><i class="fa-solid fa-dice-six text-amber-400 text-xs"></i><i class="fa-solid fa-dice-six text-amber-400 text-xs"></i><i class="fa-solid fa-dice-six text-amber-400 text-xs"></i></div><span class="text-xs text-slate-300">Three 6s</span></div>
+              <span class="text-xs font-black text-amber-400">600</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Special combos -->
+        <div>
+          <div class="text-[10px] uppercase tracking-wider text-slate-600 font-semibold mb-1.5">Special combinations</div>
+          <div class="grid grid-cols-2 gap-1.5">
+            <div class="flex items-center justify-between bg-slate-950/60 border border-slate-800/60 rounded-lg px-3 py-2">
+              <div class="flex items-center space-x-2"><div class="flex space-x-0.5 text-amber-400/80 text-[10px]"><i class="fa-solid fa-dice-two"></i><i class="fa-solid fa-dice-two"></i><i class="fa-solid fa-dice-four"></i><i class="fa-solid fa-dice-four"></i></div><span class="text-xs text-slate-300">3 Pairs</span></div>
+              <span class="text-xs font-black text-amber-400">750</span>
+            </div>
+            <div class="flex items-center justify-between bg-slate-950/60 border border-slate-800/60 rounded-lg px-3 py-2">
+              <div class="flex items-center space-x-2"><div class="flex space-x-0.5 text-amber-400/80 text-[10px]"><i class="fa-solid fa-dice-one"></i><i class="fa-solid fa-dice-two"></i><i class="fa-solid fa-dice-three"></i><i class="fa-solid fa-dice-four"></i><i class="fa-solid fa-dice-five"></i><i class="fa-solid fa-dice-six"></i></div></div>
+              <span class="text-xs font-black text-amber-400">1,500</span>
+            </div>
+            <div class="flex items-center justify-between bg-slate-950/60 border border-slate-800/60 rounded-lg px-3 py-2">
+              <div class="flex items-center space-x-2"><div class="flex space-x-0.5 text-amber-400/80 text-[10px]"><i class="fa-solid fa-dice-four"></i><i class="fa-solid fa-dice-four"></i><i class="fa-solid fa-dice-four"></i><i class="fa-solid fa-dice-four"></i></div><span class="text-xs text-slate-300">4 of a kind</span></div>
+              <span class="text-xs font-black text-amber-400">1,000</span>
+            </div>
+            <div class="flex items-center justify-between bg-slate-950/60 border border-slate-800/60 rounded-lg px-3 py-2">
+              <div class="flex items-center space-x-2"><div class="flex space-x-0.5 text-amber-400/80 text-[10px]"><i class="fa-solid fa-dice-five"></i><i class="fa-solid fa-dice-five"></i><i class="fa-solid fa-dice-five"></i><i class="fa-solid fa-dice-five"></i><i class="fa-solid fa-dice-five"></i></div><span class="text-xs text-slate-300">5 of a kind</span></div>
+              <span class="text-xs font-black text-amber-400">2,000</span>
+            </div>
+            <div class="flex items-center justify-between bg-slate-950/60 border border-slate-800/60 rounded-lg px-3 py-2">
+              <div class="flex items-center space-x-2"><div class="flex space-x-0.5 text-amber-400/80 text-[10px]"><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i></div><span class="text-xs text-slate-300">6 of a kind</span></div>
+              <span class="text-xs font-black text-amber-400">3,000</span>
+            </div>
+            <div class="flex items-center justify-between bg-slate-950/60 border border-slate-800/60 rounded-lg px-3 py-2">
+              <div class="flex items-center space-x-2"><div class="flex space-x-0.5 text-amber-400/80 text-[10px]"><i class="fa-solid fa-dice-three"></i><i class="fa-solid fa-dice-three"></i><i class="fa-solid fa-dice-three"></i><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i></div><span class="text-xs text-slate-300">2 Triplets</span></div>
+              <span class="text-xs font-black text-amber-400">2,500</span>
+            </div>
+            <div class="col-span-2 flex items-center justify-between bg-slate-950/60 border border-slate-800/60 rounded-lg px-3 py-2">
+              <div class="flex items-center space-x-2"><div class="flex space-x-0.5 text-amber-400/80 text-[10px]"><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-six"></i><i class="fa-solid fa-dice-three"></i><i class="fa-solid fa-dice-three"></i></div><span class="text-xs text-slate-300">4 of a kind + pair</span></div>
+              <span class="text-xs font-black text-amber-400">1,500</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<!-- ═══════════════════ MODALS ═══════════════════ -->
+
+<!-- Mode Selector -->
+<div id="modeModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+  <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-7 shadow-2xl space-y-6 bounce-in">
+    <div class="text-center">
+      <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center text-slate-950 text-2xl font-black mx-auto mb-3 shadow-lg shadow-amber-500/25">
+        <i class="fa-solid fa-dice"></i>
+      </div>
+      <h2 class="text-xl font-black text-slate-100">Choose Game Mode</h2>
+      <p class="text-xs text-slate-500 mt-1">How would you like to play?</p>
+    </div>
+    <div class="space-y-3">
+      <button onclick="selectMode('tracker')" class="mode-card w-full bg-slate-950/80 hover:bg-slate-800/90 border-2 border-slate-700 hover:border-amber-500/60 rounded-2xl p-5 text-left flex items-start space-x-4 active:scale-98">
+        <div class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 text-xl flex-shrink-0 mt-0.5">
+          <i class="fa-solid fa-clipboard-list"></i>
+        </div>
+        <div>
+          <div class="font-extrabold text-slate-100 text-sm mb-1">Score Tracker</div>
+          <div class="text-xs text-slate-400 leading-relaxed">You roll real dice and tap score combinations manually. Great for physical dice play.</div>
+        </div>
+      </button>
+      <button onclick="selectMode('dice')" class="mode-card w-full bg-slate-950/80 hover:bg-slate-800/90 border-2 border-slate-700 hover:border-amber-500/60 rounded-2xl p-5 text-left flex items-start space-x-4 active:scale-98">
+        <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xl flex-shrink-0 mt-0.5">
+          <i class="fa-solid fa-dice"></i>
+        </div>
+        <div>
+          <div class="font-extrabold text-slate-100 text-sm mb-1 flex items-center space-x-2">
+            <span>Full Dice Game</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">Digital dice</span>
+          </div>
+          <div class="text-xs text-slate-400 leading-relaxed">The app rolls the dice for you, auto-detects scoring combos, and guides you through each turn.</div>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Player -->
+<div id="addPlayerModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+      <h3 class="text-base font-bold text-slate-100">Add Player</h3>
+      <button onclick="closeAddPlayerModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+    </div>
+    <input type="text" id="newPlayerNameInput" placeholder="Player name" maxlength="20"
+      onkeydown="if(event.key==='Enter')handleAddPlayer()"
+      class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-600 text-sm focus:outline-none focus:border-amber-500 transition">
+    <div class="flex space-x-3">
+      <button onclick="closeAddPlayerModal()" class="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-sm transition">Cancel</button>
+      <button onclick="handleAddPlayer()" class="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm transition shadow-lg shadow-amber-500/20">Add Player</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings -->
+<div id="settingsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+      <h3 class="text-base font-bold text-slate-100">Game Settings</h3>
+      <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+    </div>
+    <div class="space-y-3">
+      <div class="flex items-center justify-between bg-slate-950/60 rounded-xl px-4 py-3 border border-slate-800">
+        <div><div class="text-sm font-semibold text-slate-200">Target score</div><div class="text-[11px] text-slate-500">Winning score</div></div>
+        <div class="flex items-center space-x-2">
+          <button onclick="adjSetting('target',-1000)" class="w-7 h-7 rounded-full bg-slate-800 hover:bg-amber-500/20 border border-slate-700 text-slate-300 font-bold flex items-center justify-center text-sm transition active:scale-95">−</button>
+          <span id="s_target" class="text-sm font-black text-amber-400 min-w-[60px] text-center">10,000</span>
+          <button onclick="adjSetting('target',+1000)" class="w-7 h-7 rounded-full bg-slate-800 hover:bg-amber-500/20 border border-slate-700 text-slate-300 font-bold flex items-center justify-center text-sm transition active:scale-95">+</button>
+        </div>
+      </div>
+      <div class="flex items-center justify-between bg-slate-950/60 rounded-xl px-4 py-3 border border-slate-800">
+        <div><div class="text-sm font-semibold text-slate-200">Minimum to bank</div><div class="text-[11px] text-slate-500">0 = no minimum</div></div>
+        <div class="flex items-center space-x-2">
+          <button onclick="adjSetting('minBank',-50)" class="w-7 h-7 rounded-full bg-slate-800 hover:bg-amber-500/20 border border-slate-700 text-slate-300 font-bold flex items-center justify-center text-sm transition active:scale-95">−</button>
+          <span id="s_minBank" class="text-sm font-black text-amber-400 min-w-[48px] text-center">0</span>
+          <button onclick="adjSetting('minBank',+50)" class="w-7 h-7 rounded-full bg-slate-800 hover:bg-amber-500/20 border border-slate-700 text-slate-300 font-bold flex items-center justify-center text-sm transition active:scale-95">+</button>
+        </div>
+      </div>
+      <div class="flex items-center justify-between bg-slate-950/60 rounded-xl px-4 py-3 border border-slate-800">
+        <div><div class="text-sm font-semibold text-slate-200">Max undo steps</div><div class="text-[11px] text-slate-500">Cross-turn undos</div></div>
+        <div class="flex items-center space-x-2">
+          <button onclick="adjSetting('maxUndo',-1)" class="w-7 h-7 rounded-full bg-slate-800 hover:bg-amber-500/20 border border-slate-700 text-slate-300 font-bold flex items-center justify-center text-sm transition active:scale-95">−</button>
+          <span id="s_maxUndo" class="text-sm font-black text-amber-400 min-w-[32px] text-center">3</span>
+          <button onclick="adjSetting('maxUndo',+1)" class="w-7 h-7 rounded-full bg-slate-800 hover:bg-amber-500/20 border border-slate-700 text-slate-300 font-bold flex items-center justify-center text-sm transition active:scale-95">+</button>
+        </div>
+      </div>
+      <div class="flex items-center justify-between bg-slate-950/60 rounded-xl px-4 py-3 border border-slate-800">
+        <div><div class="text-sm font-semibold text-slate-200">Last-lap rule</div><div class="text-[11px] text-slate-500">Everyone finishes the round</div></div>
+        <button id="s_lastLap" onclick="toggleSetting('lastLap')" class="relative w-11 h-6 rounded-full border transition-colors duration-200 focus:outline-none bg-amber-500 border-amber-400">
+          <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 translate-x-5"></span>
+        </button>
+      </div>
+    </div>
+    <button onclick="closeSettingsModal()" class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm transition shadow-lg shadow-amber-500/20">Done</button>
+  </div>
+</div>
+
+<!-- Winner -->
+<div id="winnerModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 hidden">
+  <div class="bg-slate-900 border border-amber-500/40 rounded-3xl w-full max-w-sm p-8 shadow-2xl text-center space-y-5 bounce-in">
+    <div class="w-20 h-20 bg-gradient-to-br from-amber-400 to-yellow-600 rounded-3xl mx-auto flex items-center justify-center text-slate-950 text-3xl shadow-xl shadow-amber-500/30">
+      <i class="fa-solid fa-trophy"></i>
+    </div>
+    <div>
+      <span class="text-xs uppercase tracking-widest text-amber-400 font-bold">Victory!</span>
+      <h2 id="winnerText" class="text-2xl font-black text-slate-100 mt-1">Player Wins!</h2>
+      <div id="finalScoresList" class="mt-4 text-left space-y-1.5"></div>
+    </div>
+    <div class="space-y-2.5 pt-1">
+      <button onclick="startNewGameFromWinner()" class="w-full py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-sm transition active:scale-95 flex items-center justify-center space-x-2">
+        <i class="fa-solid fa-rotate-right text-red-400"></i><span>Start new game</span>
+      </button>
+      <button onclick="continueWithNewTarget()" class="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-sm transition shadow-lg shadow-amber-500/20 active:scale-95 flex items-center justify-center space-x-2">
+        <i class="fa-solid fa-arrow-trend-up"></i>
+        <span>Continue to <span id="newTargetLabel">15,000</span></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed top-20 right-4 z-50 transform -translate-y-40 opacity-0 transition-all duration-300 bg-slate-900 border border-slate-700 text-slate-100 px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 pointer-events-none max-w-xs">
+  <div id="toastIcon" class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm flex-shrink-0"><i class="fa-solid fa-check"></i></div>
+  <span id="toastMsg" class="text-xs font-semibold"></span>
+</div>
+
+<!-- ═══════════════════ SCRIPT ═══════════════════ -->
+<script>
+// ─────────────────────────────────────────────────────────
+// SETTINGS
+// ─────────────────────────────────────────────────────────
+const SETTINGS = { target:10000, minBank:0, maxUndo:3, lastLap:true };
+
+// ─────────────────────────────────────────────────────────
+// PLAYER COLORS
+// ─────────────────────────────────────────────────────────
+const COLORS = [
+  {bg:'rgba(108,99,255,0.18)',  text:'#a09bff', bar:'#6c63ff', border:'rgba(108,99,255,0.5)'},
+  {bg:'rgba(62,207,142,0.16)', text:'#3ecf8e', bar:'#3ecf8e', border:'rgba(62,207,142,0.5)'},
+  {bg:'rgba(255,107,107,0.18)',text:'#ff8a8a', bar:'#ff6b6b', border:'rgba(255,107,107,0.5)'},
+  {bg:'rgba(255,190,11,0.18)', text:'#ffd040', bar:'#ffbe0b', border:'rgba(255,190,11,0.5)'},
+  {bg:'rgba(0,210,255,0.16)',  text:'#4dd8f0', bar:'#00d2ff', border:'rgba(0,210,255,0.5)'},
+  {bg:'rgba(255,100,200,0.18)',text:'#ff90d8', bar:'#ff64c8', border:'rgba(255,100,200,0.5)'},
+  {bg:'rgba(120,220,60,0.16)', text:'#90e040', bar:'#78dc3c', border:'rgba(120,220,60,0.5)'},
+  {bg:'rgba(255,140,50,0.18)', text:'#ffaa60', bar:'#ff8c32', border:'rgba(255,140,50,0.5)'},
+];
+const pc  = i => COLORS[i % COLORS.length];
+const ini = n => { const p=n.trim().split(/\s+/); return p.length>=2?(p[0][0]+p[p.length-1][0]).toUpperCase():n.slice(0,2).toUpperCase(); };
+
+// ─────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────
+let state = {
+  mode: null,   // 'tracker' | 'dice' — null = not chosen yet
+  players: [
+    {id:1,name:'Figo', colorIdx:0,score:0,turns:0,history:[]},
+    {id:2,name:'Adham',colorIdx:1,score:0,turns:0,history:[]},
+    {id:3,name:'Dody', colorIdx:2,score:0,turns:0,history:[]},
+    {id:4,name:'Emma', colorIdx:3,score:0,turns:0,history:[]},
+  ],
+  activePlayerId: 1,
+  turnScore: 0,
+  round: 1,
+  inLastLap: false,
+  lastLapTriggerIdx: -1,
+  lastLapFinishedPlayers: 0,
+  snapshots: [],
+  ptHistory: [],
+  gameHistory: [],
+  nextId: 5,
+  // Dice-mode state
+  dice: [],          // [{val, kept, scoring, used}] × 6
+  hasRolled: false,
+  farklePending: false,
+  rollingInProgress: false,
+};
+
+// ─────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────
+window.onload = () => {
+  loadFromStorage();
+  if (!state.mode) {
+    document.getElementById('modeModal').classList.remove('hidden');
+  } else {
+    document.getElementById('modeModal').classList.add('hidden');
+    applyMode(state.mode);
+    renderAll();
+  }
+};
+
+// ─────────────────────────────────────────────────────────
+// MODE SELECTION
+// ─────────────────────────────────────────────────────────
+function selectMode(mode) {
+  state.mode = mode;
+  document.getElementById('modeModal').classList.add('hidden');
+  applyMode(mode);
+  resetDiceState();
+  renderAll();
+  saveToStorage();
+}
+
+function applyMode(mode) {
+  const isTracker = mode === 'tracker';
+  document.getElementById('trackerPanel').classList.toggle('hidden', !isTracker);
+  document.getElementById('dicePanel').classList.toggle('hidden', isTracker);
+  document.getElementById('clearTurnBtn').classList.toggle('hidden', !isTracker);
+  document.getElementById('modeLabel').textContent = isTracker ? 'Score Tracker Mode' : 'Full Dice Game Mode';
+}
+
+// ─────────────────────────────────────────────────────────
+// STORAGE
+// ─────────────────────────────────────────────────────────
+function saveToStorage() {
+  try { localStorage.setItem('farkle_v4', JSON.stringify({state, SETTINGS})); } catch(e){}
+}
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem('farkle_v4');
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (saved.state)    Object.assign(state, saved.state);
+    if (saved.SETTINGS) Object.assign(SETTINGS, saved.SETTINGS);
+  } catch(e){}
+}
+
+// ─────────────────────────────────────────────────────────
+// SNAPSHOT (undo)
+// ─────────────────────────────────────────────────────────
+function saveSnapshot() {
+  const snap = JSON.parse(JSON.stringify({
+    players:state.players, activePlayerId:state.activePlayerId,
+    turnScore:state.turnScore, round:state.round,
+    inLastLap:state.inLastLap, lastLapTriggerIdx:state.lastLapTriggerIdx,
+    lastLapFinishedPlayers:state.lastLapFinishedPlayers,
+    ptHistory:state.ptHistory, gameHistory:state.gameHistory,
+    dice:state.dice, hasRolled:state.hasRolled,
+  }));
+  state.snapshots.unshift(snap);
+  if (state.snapshots.length > SETTINGS.maxUndo) state.snapshots.pop();
+}
+function restoreSnapshot() {
+  if (!state.snapshots.length) return;
+  const s = state.snapshots.shift();
+  Object.assign(state, s);
+}
+
+// ─────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────
+const activePlayer = () => state.players.find(p => p.id === state.activePlayerId);
+const activeIdx    = () => state.players.findIndex(p => p.id === state.activePlayerId);
+
+// ─────────────────────────────────────────────────────────
+// TRACKER MODE — ADD POINTS
+// ─────────────────────────────────────────────────────────
+function addPoints(amount, desc) {
+  if (!activePlayer()) { showToast('No active player!','error'); return; }
+  state.ptHistory.push(amount);
+  state.turnScore += amount;
+  renderAll();
+  showToast(`+${amount.toLocaleString()} — ${desc}`);
+}
+function addCustomPoints() {
+  const inp = document.getElementById('customPointsInput');
+  const v = parseInt(inp.value, 10);
+  if (isNaN(v) || v <= 0) { showToast('Enter a valid number.','error'); return; }
+  addPoints(v, 'Custom'); inp.value = '';
+}
+function resetTurnScore() {
+  if (state.turnScore === 0) return;
+  saveSnapshot();
+  state.turnScore = 0; state.ptHistory = [];
+  renderAll(); showToast('Turn cleared');
+}
+
+// ─────────────────────────────────────────────────────────
+// DICE MODE — SCORING ENGINE
+// ─────────────────────────────────────────────────────────
+function scoreDice(vals) {
+  // Returns {score, label, scoringIndices} for a given array of die values (by index)
+  if (!vals || vals.length === 0) return {score:0, label:'', scoringIndices:[]};
+
+  const n = vals.length;
+  const counts = {};
+  vals.forEach((v,i) => { if(!counts[v]) counts[v]={count:0,indices:[]}; counts[v].count++; counts[v].indices.push(i); });
+
+  // 6-dice specials
+  if (n === 6) {
+    const sorted = [...vals].sort((a,b)=>a-b);
+    if (sorted.join('')==='123456') return {score:1500,label:'Straight 1–6 🎯',scoringIndices:[0,1,2,3,4,5]};
+    const pairs = Object.values(counts).filter(c=>c.count===2);
+    if (pairs.length===3) return {score:750,label:'Three Pairs',scoringIndices:[0,1,2,3,4,5]};
+    const trips = Object.values(counts).filter(c=>c.count===3);
+    if (trips.length===2) return {score:2500,label:'Two Triplets 🎲🎲',scoringIndices:[0,1,2,3,4,5]};
+    const fours = Object.entries(counts).find(([,c])=>c.count>=4);
+    const twos  = Object.entries(counts).find(([v,c])=>c.count===2 && (!fours || v!==fours[0]));
+    if (fours && twos) return {score:1500,label:'Four of a Kind + Pair',scoringIndices:[0,1,2,3,4,5]};
+  }
+
+  // Build score from combinations
+  let totalScore = 0, label = '', scoringIndices = [];
+  const used = new Set();
+
+  // Check N-of-a-kind (6,5,4,3)
+  for (let face=1; face<=6; face++) {
+    if (!counts[face]) continue;
+    const c = counts[face].count;
+    const idxs = counts[face].indices;
+    if (c >= 6) { const base=face===1?1000:face*100; totalScore+=base*4; label+=`Six ${face}s `; scoringIndices.push(...idxs); idxs.forEach(i=>used.add(i)); }
+    else if (c >= 5) { const base=face===1?1000:face*100; totalScore+=base*3; label+=`Five ${face}s `; idxs.slice(0,5).forEach(i=>{scoringIndices.push(i);used.add(i);}); }
+    else if (c >= 4) { const base=face===1?1000:face*100; totalScore+=base*2; label+=`Four ${face}s `; idxs.slice(0,4).forEach(i=>{scoringIndices.push(i);used.add(i);}); }
+    else if (c >= 3) { const base=face===1?1000:face*100; totalScore+=base; label+=`Three ${face}s `; idxs.slice(0,3).forEach(i=>{scoringIndices.push(i);used.add(i);}); }
+  }
+
+  // Singles: 1s and 5s not already used
+  for (let face of [1,5]) {
+    if (!counts[face]) continue;
+    counts[face].indices.forEach(i => {
+      if (!used.has(i)) { totalScore += face===1?100:50; scoringIndices.push(i); used.add(i); label += face===1?'+1 ':'5 '; }
+    });
+  }
+
+  return {score:totalScore, label:label.trim(), scoringIndices};
+}
+
+function canScore(vals) { return scoreDice(vals).score > 0; }
+
+// ─────────────────────────────────────────────────────────
+// DICE MODE — ROLL
+// ─────────────────────────────────────────────────────────
+const FACE_ICONS = ['','fa-dice-one','fa-dice-two','fa-dice-three','fa-dice-four','fa-dice-five','fa-dice-six'];
+
+// SVG dot positions for each face (on a 60x60 grid, dots at radius 5.5)
+const DOT_POS = {
+  1: [[30,30]],
+  2: [[18,18],[42,42]],
+  3: [[18,18],[30,30],[42,42]],
+  4: [[18,18],[42,18],[18,42],[42,42]],
+  5: [[18,18],[42,18],[30,30],[18,42],[42,42]],
+  6: [[18,15],[42,15],[18,30],[42,30],[18,45],[42,45]],
+};
+
+function dieSVG(val, cls) {
+  const isScoring = cls.includes('scoring');
+  const isKept    = cls.includes('kept') && !isScoring;
+  const dotColor  = isScoring ? '#a09bff' : isKept ? '#fbbf24' : '#f8fafc';
+  const dots = val ? (DOT_POS[val]||[]).map(([x,y]) =>
+    `<circle cx="${x}" cy="${y}" r="5.5" fill="${dotColor}" opacity="${val?'0.95':'0'}"/>`
+  ).join('') : `<text x="30" y="36" text-anchor="middle" font-size="20" fill="rgba(255,255,255,0.15)" font-family="Inter,sans-serif">?</text>`;
+  return `<svg class="die-face" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">${dots}</svg>`;
+}
+
+function resetDiceState() {
+  state.dice = Array.from({length:6}, () => ({val:0,kept:false,scoring:false,used:false}));
+  state.hasRolled = false;
+  state.farklePending = false;
+  state.rollingInProgress = false;
+  state.turnScore = 0;
+  state.ptHistory = [];
+  // Reset all dice-panel UI
+  const banner = document.getElementById('comboBanner');
+  if (banner) banner.classList.add('hidden');
+  const farkleN = document.getElementById('farkleNotice');
+  if (farkleN) farkleN.classList.add('hidden');
+  const hotN = document.getElementById('hotDiceNotice');
+  if (hotN) hotN.classList.add('hidden');
+  const statusLbl = document.getElementById('diceStatusLabel');
+  if (statusLbl) statusLbl.textContent = 'Press Roll to start';
+  const lbl = document.getElementById('rollBtnLabel');
+  if (lbl) lbl.textContent = 'Roll Dice';
+  const keepBtn = document.getElementById('keepRollBtn');
+  if (keepBtn) keepBtn.disabled = true;
+  updateFarkleBtn();
+}
+
+function rollDice() {
+  if (state.rollingInProgress) return;
+  if (state.farklePending) return;
+  if (!activePlayer()) { showToast('No active player!','error'); return; }
+
+  // Determine which dice to roll (not kept, not used)
+  const toRoll = state.dice.map((d,i) => (!d.kept && !d.used) ? i : -1).filter(i=>i>=0);
+  if (toRoll.length === 0) { showToast('No dice to roll!','error'); return; }
+
+  state.rollingInProgress = true;
+  state.farklePending = false;
+
+  // Clear scoring highlights and banners
+  state.dice.forEach(d => { d.scoring = false; });
+  document.getElementById('comboBanner').classList.add('hidden');
+  document.getElementById('hotDiceNotice').classList.add('hidden');
+  document.getElementById('farkleNotice').classList.add('hidden');
+  document.getElementById('keepRollBtn').disabled = true;
+  document.getElementById('rollBtn').disabled = true;
+
+  // Render grid fresh FIRST so children exist before we try to animate them
+  renderDiceGrid();
+
+  // Cycle random values during animation
+  let elapsed = 0;
+  const interval = setInterval(() => {
+    try {
+      toRoll.forEach(i => { state.dice[i].val = Math.ceil(Math.random()*6); });
+      renderDiceGrid();
+      elapsed += 80;
+      if (elapsed >= 700) {
+        clearInterval(interval);
+        finishRoll(toRoll);
+      }
+    } catch(e) {
+      clearInterval(interval);
+      state.rollingInProgress = false;
+    }
+  }, 80);
+}
+
+function finishRoll(rolledIndices) {
+  // Set final values on newly rolled dice
+  rolledIndices.forEach(i => { state.dice[i].val = Math.ceil(Math.random()*6); state.dice[i].kept = false; state.dice[i].scoring = false; });
+  state.hasRolled = true;
+  state.rollingInProgress = false;
+
+  // Score ALL active dice together (used/kept from prev rolls + newly rolled)
+  // This correctly detects cross-roll combos like four-of-a-kind spanning two rolls.
+  const allActiveDice = state.dice
+    .map((d,i) => ({...d, idx:i}))
+    .filter(d => d.used || rolledIndices.includes(d.idx));
+
+  const allActiveVals = allActiveDice.map(d => d.val);
+  const fullResult = scoreDice(allActiveVals);
+
+  // Check if the NEW dice (alone) contribute any scoring — farkle if not
+  const rolledVals = rolledIndices.map(i => state.dice[i].val);
+  const newOnlyResult = scoreDice(rolledVals);
+
+  // Also try scoring just the used dice (already committed)
+  const usedVals = state.dice.filter(d => d.used).map(d => d.val);
+  const usedResult = usedVals.length ? scoreDice(usedVals) : {score:0};
+
+  // The incremental value of the new roll = full combo score minus what was already committed
+  const incrementalScore = fullResult.score - usedResult.score;
+
+  if (incrementalScore <= 0 && newOnlyResult.score === 0) {
+    // FARKLE — new dice add nothing
+    state.farklePending = true;
+    renderDiceGrid();
+    document.getElementById('farkleNotice').classList.remove('hidden');
+    document.getElementById('keepRollBtn').disabled = true;
+    updateRollBtn();
+    updateFarkleBtn();
+    showToast('Farkle! Press "Next player" to continue.','error');
+  } else {
+    // Determine which of the newly rolled dice are part of the best combo
+    // We highlight all newly rolled dice that are part of fullResult's scoring set
+    const fullScoringRelIndices = new Set(fullResult.scoringIndices);
+    let newScoringCount = 0;
+    allActiveDice.forEach((d, relIdx) => {
+      if (rolledIndices.includes(d.idx) && fullScoringRelIndices.has(relIdx)) {
+        state.dice[d.idx].scoring = true;
+        newScoringCount++;
+      }
+    });
+
+    // If full-set scoring didn't highlight any new dice, fall back to new-only scoring
+    if (newScoringCount === 0) {
+      newOnlyResult.scoringIndices.forEach(relIdx => {
+        state.dice[rolledIndices[relIdx]].scoring = true;
+        newScoringCount++;
+      });
+    }
+
+    // Store the incremental score as a pending value on state for bank/display
+    // The combo label comes from the full picture
+    const displayScore = incrementalScore > 0 ? incrementalScore : newOnlyResult.score;
+    const displayLabel = incrementalScore > 0 ? fullResult.label : newOnlyResult.label;
+
+    renderDiceGrid();
+    showComboBanner(displayLabel, displayScore);
+    updateBankBtn();
+    renderActiveBanner();
+    updateKeepRollBtn();
+    updateRollBtn();
+    checkHotDice();
+
+    document.getElementById('diceStatusLabel').textContent =
+      `${newScoringCount} scoring ${newScoringCount===1?'die':'dice'} detected`;
+  }
+}
+
+function checkHotDice() {
+  const allKeptOrScoring = state.dice.every(d => d.kept || d.scoring || d.used);
+  if (allKeptOrScoring && !state.dice.every(d=>d.used)) {
+    document.getElementById('hotDiceNotice').classList.remove('hidden');
+  }
+}
+
+function showComboBanner(label, score) {
+  document.getElementById('comboBanner').classList.remove('hidden');
+  document.getElementById('comboLabel').textContent = label || 'Scoring combo';
+  document.getElementById('comboScore').textContent = '+' + score.toLocaleString();
+}
+
+function toggleDie(idx) {
+  if (!state.hasRolled || state.rollingInProgress || state.farklePending) return;
+  const d = state.dice[idx];
+  if (d.used) return;          // permanently locked from a previous keepAndRoll — can't touch
+  if (!d.val) return;          // unrolled die — nothing to select
+
+  // Toggle selection: scoring → deselect (back to rollable), not-scoring → select
+  if (d.scoring) {
+    d.scoring = false;
+    d.kept    = false;  // returns to the roll pool
+  } else {
+    d.scoring = true;
+    d.kept    = true;
+  }
+
+  renderDiceGrid();
+
+  // Show combo banner with correct cross-roll incremental score
+  const scoringDice = state.dice.filter(d => d.scoring);
+  if (scoringDice.length > 0) {
+    const allLockedVals = state.dice.filter(d => d.used || d.scoring).map(d => d.val);
+    const fullResult = scoreDice(allLockedVals);
+    const alreadyUsedVals = state.dice.filter(d => d.used).map(d => d.val);
+    const alreadyResult = alreadyUsedVals.length ? scoreDice(alreadyUsedVals) : {score:0};
+    const incremental = Math.max(0, fullResult.score - alreadyResult.score);
+    const label = incremental > 0 ? fullResult.label : scoreDice(scoringDice.map(d=>d.val)).label;
+    const score = incremental > 0 ? incremental : scoreDice(scoringDice.map(d=>d.val)).score;
+    showComboBanner(label || 'Selected', score);
+  } else {
+    document.getElementById('comboBanner').classList.add('hidden');
+  }
+
+  // Update turn score display, bank button, and keep-roll button synchronously
+  renderActiveBanner();
+  updateBankBtn();
+  updateKeepRollBtn();
+}
+
+function keepAndRoll() {
+  if (state.rollingInProgress) return;
+
+  const newlySelected = state.dice.filter(d => d.scoring);
+  if (newlySelected.length === 0) { showToast('Select at least one scoring die first.','error'); return; }
+
+  // Score ALL dice that will be locked (already-used + newly selected) together
+  // so cross-roll combos are valued correctly (e.g. kept 5 + three new 5s = four-of-a-kind)
+  const allLockedVals = state.dice
+    .filter(d => d.used || d.scoring)
+    .map(d => d.val);
+  const fullResult = scoreDice(allLockedVals);
+
+  // Already committed score (from dice locked in previous keepAndRoll calls)
+  const alreadyUsedVals = state.dice.filter(d => d.used).map(d => d.val);
+  const alreadyResult = alreadyUsedVals.length ? scoreDice(alreadyUsedVals) : {score:0};
+
+  // Incremental gain from this selection — must be > 0, meaning selected dice
+  // genuinely contribute to a valid scoring combination from the current roll.
+  const gained = fullResult.score - alreadyResult.score;
+  if (gained <= 0) {
+    showToast('Selected dice must form a valid scoring combination.','error');
+    return;
+  }
+
+  state.ptHistory.push(gained);
+  state.turnScore += gained;
+
+  // Lock newly selected dice
+  state.dice.forEach(d => {
+    if (d.scoring) { d.kept = true; d.scoring = false; d.used = true; }
+  });
+
+  // Hot dice: if all 6 are now used, reset for a fresh set but keep turnScore
+  const allUsed = state.dice.every(d => d.used);
+  if (allUsed) {
+    state.dice.forEach(d => { d.kept=false; d.scoring=false; d.used=false; d.val=0; });
+    showToast(`🔥 Hot Dice! ${state.turnScore.toLocaleString()} pts so far — roll all 6!`);
+  }
+
+  document.getElementById('hotDiceNotice').classList.add('hidden');
+  document.getElementById('comboBanner').classList.add('hidden');
+
+  renderAll();
+  rollDice();
+}
+
+function renderDiceGrid() {
+  const grid = document.getElementById('diceGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  state.dice.forEach((d,i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'die-wrap flex justify-center';
+    let cls = 'die';
+    if (d.scoring) cls += ' scoring';
+    else if (d.kept || d.used) cls += ' kept';
+    if (d.used && !d.scoring) cls += ' used';
+    if (state.farklePending) cls += ' farkled';
+    wrap.innerHTML = `<div class="${cls}" onclick="toggleDie(${i})">${dieSVG(d.val, cls)}</div>`;
+    grid.appendChild(wrap);
+  });
+}
+
+// ─────────────────────────────────────────────────────────
+// BANK
+// ─────────────────────────────────────────────────────────
+function bankTurnScore() {
+  const player = activePlayer();
+  if (!player) { showToast('No active player!','error'); return; }
+
+  // In dice mode: commit any currently highlighted scoring dice before banking.
+  // Score all active dice together to catch cross-roll combos correctly.
+  if (state.mode === 'dice') {
+    const pendingScoring = state.dice.filter(d => d.scoring);
+    if (pendingScoring.length > 0) {
+      const allLockedVals = state.dice.filter(d => d.used || d.scoring).map(d => d.val);
+      const fullResult = scoreDice(allLockedVals);
+      const alreadyUsedVals = state.dice.filter(d => d.used).map(d => d.val);
+      const alreadyResult = alreadyUsedVals.length ? scoreDice(alreadyUsedVals) : {score:0};
+      const gained = fullResult.score - alreadyResult.score;
+      if (gained > 0) {
+        state.turnScore += gained;
+        state.ptHistory.push(gained);
+      }
+      state.dice.forEach(d => { if (d.scoring) { d.scoring = false; d.kept = true; d.used = true; } });
+    }
+  }
+
+  if (state.mode === 'dice' && !state.hasRolled && state.turnScore === 0) {
+    showToast('Roll the dice first!','error'); return;
+  }
+  if (state.turnScore < SETTINGS.minBank) { showToast(`Need at least ${SETTINGS.minBank.toLocaleString()} pts to bank.`,'error'); return; }
+  if (state.turnScore <= 0) { showToast('No points to bank!','error'); return; }
+
+  saveSnapshot();
+  const banked = state.turnScore;
+  player.score += banked;
+  player.turns++;
+  player.history.push({turn:state.round,pts:banked,type:'bank'});
+  state.gameHistory.unshift({who:player.name,colorIdx:player.colorIdx,pts:banked,turn:player.turns,farkle:false});
+  state.turnScore = 0; state.ptHistory = [];
+
+  if (!state.inLastLap && player.score >= SETTINGS.target) {
+    if (SETTINGS.lastLap) { state.inLastLap=true; state.lastLapTriggerIdx=activeIdx(); state.lastLapFinishedPlayers=0; }
+    else { renderAll(); showWinner(); return; }
+  } else if (state.inLastLap && activeIdx()!==state.lastLapTriggerIdx) {
+    state.lastLapFinishedPlayers++;
+  }
+
+  renderAll();
+  if (state.inLastLap && isLastLapDone()) { showWinner(); return; }
+  advanceTurn();
+  showToast(`Banked ${banked.toLocaleString()} pts for ${player.name}!`);
+}
+
+// ─────────────────────────────────────────────────────────
+// FARKLE
+// ─────────────────────────────────────────────────────────
+
+// Called from the Farkle (bust) button in tracker mode OR the "Next player"
+// button / farkle button in dice mode when farklePending is true.
+function triggerFarkle() {
+  if (state.mode === 'dice' && state.farklePending) {
+    // In dice mode after auto-farkle detect: button acts as "Next player"
+    confirmFarkleAndAdvance();
+    return;
+  }
+  // Tracker mode: manual farkle bust — record and immediately advance
+  const player = activePlayer();
+  if (!player) return;
+  saveSnapshot();
+  player.turns++;
+  player.history.push({turn:state.round,pts:0,type:'farkle'});
+  state.gameHistory.unshift({who:player.name,colorIdx:player.colorIdx,pts:0,turn:player.turns,farkle:true});
+  state.turnScore = 0; state.ptHistory = [];
+  if (state.inLastLap && activeIdx()!==state.lastLapTriggerIdx) state.lastLapFinishedPlayers++;
+  renderAll();
+  if (state.inLastLap && isLastLapDone()) { showWinner(); return; }
+  advanceTurn();
+  showToast(`${player.name} Farkled! Turn lost.`,'error');
+}
+
+// Called only in dice mode when user explicitly confirms farkle and moves on.
+function confirmFarkleAndAdvance() {
+  const player = activePlayer();
+  if (!player) return;
+  saveSnapshot();
+  player.turns++;
+  player.history.push({turn:state.round,pts:0,type:'farkle'});
+  state.gameHistory.unshift({who:player.name,colorIdx:player.colorIdx,pts:0,turn:player.turns,farkle:true});
+  state.turnScore = 0; state.ptHistory = [];
+  state.farklePending = false;
+  if (state.inLastLap && activeIdx()!==state.lastLapTriggerIdx) state.lastLapFinishedPlayers++;
+  document.getElementById('farkleNotice').classList.add('hidden');
+  updateFarkleBtn();
+  if (state.inLastLap && isLastLapDone()) { showWinner(); return; }
+  advanceTurn();
+  showToast('Turn passed to next player');
+}
+
+// Toggles farkle button label/style when farklePending
+function updateFarkleBtn() {
+  const btn = document.getElementById('farkleBtn');
+  if (!btn) return;
+  if (state.mode === 'dice' && state.farklePending) {
+    btn.classList.remove('bg-red-600/90','hover:bg-red-500','border-red-500/40');
+    btn.classList.add('bg-slate-700','hover:bg-slate-600','border-slate-600');
+    btn.innerHTML = '<i class="fa-solid fa-arrow-right text-amber-400 text-sm"></i><span>Next player</span>';
+  } else {
+    btn.classList.add('bg-red-600/90','hover:bg-red-500','border-red-500/40');
+    btn.classList.remove('bg-slate-700','hover:bg-slate-600','border-slate-600');
+    btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-sm"></i><span>Farkle (bust)</span>';
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// ADVANCE TURN
+// ─────────────────────────────────────────────────────────
+function advanceTurn() {
+  const idx = activeIdx();
+  const nextIdx = (idx+1) % state.players.length;
+  state.activePlayerId = state.players[nextIdx].id;
+  if (nextIdx === 0) state.round++;
+  if (state.inLastLap && nextIdx === state.lastLapTriggerIdx) { showWinner(); return; }
+  resetDiceState();
+  renderAll();
+}
+const isLastLapDone = () => state.lastLapFinishedPlayers >= (state.players.length - state.lastLapTriggerIdx - 1);
+
+// ─────────────────────────────────────────────────────────
+// UNDO
+// ─────────────────────────────────────────────────────────
+function undoLastAction() {
+  if (state.ptHistory.length > 0) {
+    const last = state.ptHistory.pop();
+    state.turnScore -= last;
+    renderAll(); showToast('Undone last addition');
+  } else if (state.snapshots.length > 0) {
+    restoreSnapshot();
+    // Don't resetDiceState — snapshot already contains the dice array.
+    // Just re-sync the UI buttons to match restored dice state.
+    if (state.mode === 'dice') {
+      updateFarkleBtn();
+      updateRollBtn();
+      const keepBtn = document.getElementById('keepRollBtn');
+      if (keepBtn) keepBtn.disabled = true;
+    }
+    renderAll(); showToast('Undone last turn action');
+  } else {
+    showToast('Nothing to undo!','error');
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// PLAYER MANAGEMENT
+// ─────────────────────────────────────────────────────────
+function openAddPlayerModal() {
+  document.getElementById('newPlayerNameInput').value='';
+  document.getElementById('addPlayerModal').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('newPlayerNameInput').focus(),50);
+}
+function closeAddPlayerModal() { document.getElementById('addPlayerModal').classList.add('hidden'); }
+function handleAddPlayer() {
+  const name = document.getElementById('newPlayerNameInput').value.trim();
+  if (!name) { showToast('Enter a name.','error'); return; }
+  saveSnapshot();
+  state.players.push({id:state.nextId++,name,colorIdx:state.players.length%COLORS.length,score:0,turns:0,history:[]});
+  if (state.players.length===1) state.activePlayerId=state.players[0].id;
+  closeAddPlayerModal(); renderAll(); showToast(`${name} added!`);
+}
+function deletePlayer(id) {
+  if (state.players.length<=2){showToast('Need at least 2 players.','error');return;}
+  if (!confirm('Remove this player?')) return;
+  saveSnapshot();
+  state.players = state.players.filter(p=>p.id!==id);
+  if (state.activePlayerId===id) state.activePlayerId=state.players[0].id;
+  renderAll(); showToast('Player removed');
+}
+
+// ─────────────────────────────────────────────────────────
+// NEW GAME
+// ─────────────────────────────────────────────────────────
+function confirmNewGame() {
+  if (!confirm('Start a new game? All scores will be reset.')) return;
+  saveSnapshot();
+  state.players.forEach(p=>{p.score=0;p.turns=0;p.history=[];});
+  state.turnScore=0;state.ptHistory=[];state.round=1;
+  state.inLastLap=false;state.lastLapTriggerIdx=-1;state.lastLapFinishedPlayers=0;
+  state.gameHistory=[];state.snapshots=[];state.mode=null;
+  if(state.players.length) state.activePlayerId=state.players[0].id;
+  resetDiceState();
+  // Show mode selector
+  document.getElementById('modeModal').classList.remove('hidden');
+  renderAll(); showToast('New game started!');
+}
+
+// ─────────────────────────────────────────────────────────
+// SETTINGS
+// ─────────────────────────────────────────────────────────
+function openSettingsModal() { syncSettingsUI(); document.getElementById('settingsModal').classList.remove('hidden'); }
+function closeSettingsModal() { document.getElementById('settingsModal').classList.add('hidden'); renderAll(); }
+function syncSettingsUI() {
+  document.getElementById('s_target').textContent  = SETTINGS.target.toLocaleString();
+  document.getElementById('s_minBank').textContent = SETTINGS.minBank.toLocaleString();
+  document.getElementById('s_maxUndo').textContent = SETTINGS.maxUndo;
+  const btn = document.getElementById('s_lastLap');
+  if (SETTINGS.lastLap) { btn.classList.add('bg-amber-500','border-amber-400'); btn.classList.remove('bg-slate-700','border-slate-600'); btn.querySelector('span').style.transform='translateX(20px)'; }
+  else { btn.classList.remove('bg-amber-500','border-amber-400'); btn.classList.add('bg-slate-700','border-slate-600'); btn.querySelector('span').style.transform='translateX(0)'; }
+}
+function adjSetting(key,delta) {
+  if(key==='target')  SETTINGS.target  = Math.max(1000, Math.min(50000,SETTINGS.target+delta));
+  if(key==='minBank') SETTINGS.minBank = Math.max(0,    Math.min(2000, SETTINGS.minBank+delta));
+  if(key==='maxUndo') SETTINGS.maxUndo = Math.max(0,    Math.min(10,   SETTINGS.maxUndo+delta));
+  syncSettingsUI();
+}
+function toggleSetting(key) { SETTINGS[key]=!SETTINGS[key]; syncSettingsUI(); }
+
+// ─────────────────────────────────────────────────────────
+// WINNER
+// ─────────────────────────────────────────────────────────
+function showWinner() {
+  const sorted=[...state.players].sort((a,b)=>b.score-a.score||a.turns-b.turns);
+  const w=sorted[0];
+  document.getElementById('winnerText').textContent=`${w.name} Wins!`;
+  document.getElementById('finalScoresList').innerHTML=sorted.map((p,i)=>{
+    const c=pc(p.colorIdx);
+    const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`;
+    return `<div class="flex items-center justify-between py-1.5 px-3 rounded-lg" style="background:${c.bg}">
+      <div class="flex items-center space-x-2"><span class="text-sm">${medal}</span><span class="text-sm font-bold" style="color:${c.text}">${p.name}</span></div>
+      <span class="text-sm font-black" style="color:${c.text}">${p.score.toLocaleString()} pts</span>
+    </div>`;
+  }).join('');
+  document.getElementById('newTargetLabel').textContent=(SETTINGS.target+5000).toLocaleString();
+  document.getElementById('winnerModal').classList.remove('hidden');
+}
+function startNewGameFromWinner() {
+  document.getElementById('winnerModal').classList.add('hidden');
+  state.players.forEach(p=>{p.score=0;p.turns=0;p.history=[];});
+  state.turnScore=0;state.ptHistory=[];state.round=1;
+  state.inLastLap=false;state.lastLapTriggerIdx=-1;state.lastLapFinishedPlayers=0;
+  state.gameHistory=[];state.snapshots=[];state.mode=null;
+  if(state.players.length) state.activePlayerId=state.players[0].id;
+  resetDiceState();
+  document.getElementById('modeModal').classList.remove('hidden');
+  renderAll(); showToast('New game started!');
+}
+function continueWithNewTarget() {
+  document.getElementById('winnerModal').classList.add('hidden');
+  SETTINGS.target+=5000;
+  state.inLastLap=false;state.lastLapTriggerIdx=-1;state.lastLapFinishedPlayers=0;
+  state.turnScore=0;state.ptHistory=[];state.snapshots=[];
+  resetDiceState();
+  renderAll();
+  showToast(`Target raised to ${SETTINGS.target.toLocaleString()} pts — keep rolling!`);
+}
+function closeWinnerModal() { document.getElementById('winnerModal').classList.add('hidden'); }
+
+// ─────────────────────────────────────────────────────────
+// RENDER ALL
+// ─────────────────────────────────────────────────────────
+function renderAll() {
+  renderTurnOrder();
+  renderLeaderboard();
+  renderRecentTurns();
+  renderActiveBanner();
+  renderLastLapBanner();
+  updateBankBtn();
+  updateUndoBtn();
+  if (state.mode==='dice') { renderDiceGrid(); updateRollBtn(); }
+  saveToStorage();
+}
+
+function renderTurnOrder() {
+  const el=document.getElementById('turnOrderList');
+  el.innerHTML=state.players.map((p,i)=>{
+    const c=pc(p.colorIdx), isActive=p.id===state.activePlayerId;
+    return `<div class="flex items-center space-x-3 px-4 py-2.5 ${isActive?'bg-slate-800/60':''} transition">
+      <div class="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black flex-shrink-0" style="background:${c.bg};color:${c.text}">${ini(p.name)}</div>
+      <div class="flex-1 min-w-0">
+        <div class="text-xs font-semibold truncate ${isActive?'text-slate-100':'text-slate-400'}">${p.name}</div>
+        <div class="text-[10px] text-slate-600">Player ${i+1}</div>
+      </div>
+      ${isActive?`<span class="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0" style="background:${c.bg};color:${c.text}">▶ now</span>`:''}
+      <button onclick="event.stopPropagation();deletePlayer(${p.id})" class="w-6 h-6 rounded-lg flex items-center justify-center text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition flex-shrink-0 active:scale-95" title="Remove">
+        <i class="fa-solid fa-trash-can text-[10px]"></i>
+      </button>
+    </div>`;
+  }).join('');
+}
+
+function renderLeaderboard() {
+  const sorted=[...state.players].sort((a,b)=>b.score-a.score);
+  document.getElementById('leaderboard').innerHTML=sorted.map((p,rank)=>{
+    const c=pc(p.colorIdx),pct=Math.min(100,Math.round((p.score/SETTINGS.target)*100));
+    const reached=p.score>=SETTINGS.target,isActive=p.id===state.activePlayerId;
+    const medal=rank===0?'🥇':rank===1?'🥈':rank===2?'🥉':`<span class="text-slate-500 text-[10px]">#${rank+1}</span>`;
+    return `<div class="px-4 py-3 flex items-center space-x-3 ${isActive?'bg-slate-800/40':''} transition">
+      <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0" style="background:${c.bg};color:${c.text};${isActive||reached?'box-shadow:0 0 0 2px '+c.border:''}">${ini(p.name)}</div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center space-x-1.5 mb-1">
+          <span class="text-sm">${medal}</span>
+          <span class="text-xs font-semibold truncate ${isActive?'text-slate-100':'text-slate-400'}">${p.name}</span>
+          ${reached?'<span class="text-[10px] text-amber-400">🏁</span>':''}
+        </div>
+        <div class="h-1.5 rounded-full overflow-hidden bg-slate-800">
+          <div class="h-full rounded-full prog-fill" style="width:${pct}%;background:${c.bar}"></div>
+        </div>
+      </div>
+      <div class="text-right flex-shrink-0 ml-2">
+        <div class="text-sm font-black" style="color:${c.text}">${p.score.toLocaleString()}</div>
+        <div class="text-[10px] text-slate-600">T${p.turns}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderRecentTurns() {
+  const el=document.getElementById('recentTurns');
+  const recent=state.gameHistory.slice(0,8);
+  if(!recent.length){el.innerHTML='<p class="text-xs text-slate-600 px-4 py-3 italic">No turns yet.</p>';return;}
+  el.innerHTML=recent.map(h=>{
+    const c=pc(h.colorIdx);
+    return `<div class="flex items-center space-x-3 px-4 py-2.5">
+      <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0" style="background:${c.bg};color:${c.text}">${ini(h.who)}</div>
+      <span class="text-xs text-slate-400 flex-1">${h.who} · T${h.turn}</span>
+      <span class="text-xs font-bold ${h.farkle?'text-red-400':''}" style="${!h.farkle?'color:'+c.text:''}">${h.farkle?'Farkle!':'+'+h.pts.toLocaleString()}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderActiveBanner() {
+  const player=activePlayer(); if(!player) return;
+  const c=pc(player.colorIdx);
+  document.getElementById('activePlayerName').textContent=player.name;
+  document.getElementById('activePlayerName').style.color=c.text;
+  document.getElementById('activeDot').style.background=c.bar;
+  document.getElementById('activePlayerScore').textContent=`${player.score.toLocaleString()} pts`;
+  document.getElementById('activePlayerScore').style.color=c.text;
+  let pendingDiceScore = 0;
+  if (state.mode === 'dice') {
+    const scoringDice = state.dice.filter(d => d.scoring);
+    if (scoringDice.length > 0) {
+      const allLockedVals = state.dice.filter(d => d.used || d.scoring).map(d => d.val);
+      const fullResult = scoreDice(allLockedVals);
+      const alreadyUsedVals = state.dice.filter(d => d.used).map(d => d.val);
+      const alreadyResult = alreadyUsedVals.length ? scoreDice(alreadyUsedVals) : {score:0};
+      pendingDiceScore = Math.max(0, fullResult.score - alreadyResult.score);
+    }
+  }
+  const displayScore = state.turnScore + pendingDiceScore;
+  document.getElementById('turnScoreDisplay').textContent = displayScore.toLocaleString();
+  document.getElementById('turnScoreDisplay').style.color = displayScore > 0 ? c.text : '#f59e0b';
+  const note=document.getElementById('minBankNote');
+  note.textContent=SETTINGS.minBank>0&&state.turnScore<SETTINGS.minBank
+    ?`Need ${(SETTINGS.minBank-state.turnScore).toLocaleString()} more to bank`
+    :SETTINGS.minBank>0?'✓ Ready to bank':'';
+  // Show/hide roll button label update
+  if(state.mode==='dice') {
+    const availDice=state.dice.filter(d=>!d.kept&&!d.used).length;
+    document.getElementById('rollBtnLabel').textContent=
+      state.hasRolled ? `Roll ${availDice} ${availDice===1?'Die':'Dice'}` : 'Roll Dice';
+  }
+}
+
+function renderLastLapBanner() {
+  const banner=document.getElementById('lastLapBanner');
+  if(!state.inLastLap){banner.classList.add('hidden');return;}
+  const trigger=state.players[state.lastLapTriggerIdx];
+  if(!trigger) return;
+  document.getElementById('lastLapText').textContent=`Last round — ${trigger.name} hit ${trigger.score.toLocaleString()} pts. Everyone finishes their turn!`;
+  banner.classList.remove('hidden');
+}
+
+// Roll button: only enabled at the very start of a turn (no roll yet, no farkle)
+function updateRollBtn() {
+  const btn = document.getElementById('rollBtn');
+  if (!btn) return;
+  const canRoll = state.mode === 'dice' && !state.hasRolled && !state.farklePending && !state.rollingInProgress;
+  btn.disabled = !canRoll;
+  btn.style.opacity = canRoll ? '1' : '0.45';
+}
+
+// Returns true if the currently scoring dice (from this roll) form a valid combo
+function currentRollHasValidSelection() {
+  const newlySelected = state.dice.filter(d => d.scoring);
+  if (newlySelected.length === 0) return false;
+  const allLockedVals = state.dice.filter(d => d.used || d.scoring).map(d => d.val);
+  const fullResult = scoreDice(allLockedVals);
+  const alreadyUsedVals = state.dice.filter(d => d.used).map(d => d.val);
+  const alreadyResult = alreadyUsedVals.length ? scoreDice(alreadyUsedVals) : {score:0};
+  return (fullResult.score - alreadyResult.score) > 0;
+}
+
+function updateKeepRollBtn() {
+  const btn = document.getElementById('keepRollBtn');
+  if (!btn) return;
+  const canKeep = state.hasRolled && !state.rollingInProgress && !state.farklePending && currentRollHasValidSelection();
+  btn.disabled = !canKeep;
+  btn.style.opacity = canKeep ? '1' : '0.3';
+}
+
+function updateBankBtn() {
+  let pendingDiceScore = 0;
+  if (state.mode === 'dice') {
+    const scoringDice = state.dice.filter(d => d.scoring);
+    if (scoringDice.length > 0) {
+      const allLockedVals = state.dice.filter(d => d.used || d.scoring).map(d => d.val);
+      const fullResult = scoreDice(allLockedVals);
+      const alreadyUsedVals = state.dice.filter(d => d.used).map(d => d.val);
+      const alreadyResult = alreadyUsedVals.length ? scoreDice(alreadyUsedVals) : {score:0};
+      pendingDiceScore = Math.max(0, fullResult.score - alreadyResult.score);
+    }
+  }
+  const effective = state.turnScore + pendingDiceScore;
+  const canBank = effective >= SETTINGS.minBank && effective > 0;
+  const btn = document.getElementById('bankBtn');
+  btn.disabled = !canBank;
+  btn.style.opacity = canBank ? '1' : '0.35';
+  btn.style.cursor  = canBank ? 'pointer' : 'not-allowed';
+}
+function updateUndoBtn() {
+  const btn=document.getElementById('undoBtn'),label=document.getElementById('undoBtnLabel');
+  const hasWithin=state.ptHistory.length>0,hasCross=state.snapshots.length>0,canUndo=hasWithin||hasCross;
+  btn.disabled=!canUndo; btn.style.opacity=canUndo?'1':'0.3';
+  if(hasWithin) label.textContent='Undo add';
+  else if(hasCross) label.textContent=`Undo (${state.snapshots.length}/${SETTINGS.maxUndo})`;
+  else label.textContent='Undo';
+}
+
+// ─────────────────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────────────────
+let _tt;
+function showToast(msg,type='success') {
+  clearTimeout(_tt);
+  const toast=document.getElementById('toast'),icon=document.getElementById('toastIcon'),text=document.getElementById('toastMsg');
+  text.textContent=msg;
+  if(type==='error'){icon.className='w-7 h-7 rounded-lg bg-red-500/20 text-red-400 flex items-center justify-center text-sm flex-shrink-0';icon.innerHTML='<i class="fa-solid fa-triangle-exclamation"></i>';}
+  else{icon.className='w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm flex-shrink-0';icon.innerHTML='<i class="fa-solid fa-check"></i>';}
+  toast.classList.remove('-translate-y-40','opacity-0');
+  toast.classList.add('translate-y-0','opacity-100');
+  _tt=setTimeout(()=>{toast.classList.add('-translate-y-40','opacity-0');toast.classList.remove('translate-y-0','opacity-100');},3000);
+}
+</script>
+</body>
+</html>
