@@ -896,9 +896,25 @@ function finishRoll(rolledIndices) {
 }
 
 function checkHotDice() {
-  const allKeptOrScoring = state.dice.every(d => d.kept || d.scoring || d.used);
-  if (allKeptOrScoring && !state.dice.every(d=>d.used)) {
+  // Hot dice: all 6 dice will be used after the current selection (used + scoring = 6)
+  // AND every one of those 6 dice actually contributes to a scoring combination.
+  // We detect this by scoring all 6 together and checking that scoringIndices covers all 6.
+  const willBeAllUsed = state.dice.every(d => d.used || d.scoring);
+  const hasScoring = state.dice.some(d => d.scoring);
+  if (!willBeAllUsed || !hasScoring) {
+    document.getElementById('hotDiceNotice').classList.add('hidden');
+    return;
+  }
+
+  // Score all 6 dice together
+  const allVals = state.dice.map(d => d.val);
+  const result = scoreDice(allVals);
+
+  // Hot dice only if ALL 6 dice are part of the scoring combination
+  if (result.scoringIndices.length === 6) {
     document.getElementById('hotDiceNotice').classList.remove('hidden');
+  } else {
+    document.getElementById('hotDiceNotice').classList.add('hidden');
   }
 }
 
@@ -944,6 +960,7 @@ function toggleDie(idx) {
   renderActiveBanner();
   updateBankBtn();
   updateKeepRollBtn();
+  checkHotDice();
 }
 
 function keepAndRoll() {
