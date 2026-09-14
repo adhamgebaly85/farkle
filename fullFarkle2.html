@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#07090e">
-<title>Farkle Master Pro</title>
+<title>Farkle Master Pro v2.1</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>">
 <script src="https://cdn.tailwindcss.com"></script>
 <!-- Firebase SDK (compat version — no import needed) -->
@@ -2234,27 +2234,42 @@ let _hofRef = null;
 
 function hofPath() {
   const gid = (SETTINGS.groupId||'').trim().toLowerCase();
-  return gid ? `groups/${gid}/leaderboard` : 'leaderboard/default';
+  if (!gid) return null; // no group set
+  return `groups/${gid}/leaderboard`;
 }
 
 function listenHof() {
   if (!db) return;
-  // Detach any existing listener
+  if (window._hofPollTimer) clearInterval(window._hofPollTimer);
+  const path = hofPath();
+  if (!path) {
+    // No group ID set — show prompt
+    const el = document.getElementById('hofList');
+    if (el) el.innerHTML = '<p class="text-xs text-slate-500 px-4 py-4 text-center italic">Set a Group ID in ⚙️ Settings to see the Hall of Fame.</p>';
+    return;
+  }
   if (_hofRef) _hofRef.off();
-  _hofRef = db.ref(hofPath());
+  _hofRef = db.ref(path);
 
   const fetchHof = () => {
-    _hofRef.once('value').then(snap => {
-      const entries = [];
-      snap.forEach(child => entries.push({id: child.key, ...child.val()}));
-      entries.sort((a,b) => b.score - a.score || a.turns - b.turns);
-      console.log('HOF fetch, entries:', entries.length);
-      renderHof(entries.slice(0, 10));
-    }).catch(err => {
-      console.warn('HOF read error:', err);
-      const el = document.getElementById('hofList');
-      if (el) el.innerHTML = '<p class="text-xs text-slate-600 px-4 py-3 italic">Leaderboard unavailable.</p>';
-    });
+    const path = hofPath();
+    if (!path) return;
+    const dbUrl = 'https://farkle-master-default-rtdb.asia-southeast1.firebasedatabase.app/';
+    const url = `${dbUrl}${path}.json`;
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        if (!data || typeof data !== 'object') { renderHof([]); return; }
+        const entries = Object.entries(data).map(([id, v]) => ({id, ...v}));
+        entries.sort((a,b) => b.score - a.score || a.turns - b.turns);
+        console.log('HOF REST fetch, entries:', entries.length, '| path:', path);
+        renderHof(entries.slice(0, 10));
+      })
+      .catch(err => {
+        console.warn('HOF REST error:', err);
+        const el = document.getElementById('hofList');
+        if (el) el.innerHTML = '<p class="text-xs text-slate-600 px-4 py-3 italic">Leaderboard unavailable.</p>';
+      });
   };
 
   // Fetch immediately
