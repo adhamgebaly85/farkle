@@ -2239,9 +2239,11 @@ function hofPath() {
 
 function listenHof() {
   if (!db) return;
-  // Detach ALL listeners on the old ref before switching
+  // Detach any existing listener
   if (_hofRef) _hofRef.off();
   _hofRef = db.ref(hofPath());
+
+  // Use a persistent listener but force server fetch (not cache)
   _hofListener = function(snap) {
     const entries = [];
     snap.forEach(child => entries.push({id: child.key, ...child.val()}));
@@ -2249,6 +2251,9 @@ function listenHof() {
     console.log('HOF listener fired, entries:', entries.length);
     renderHof(entries.slice(0, 10));
   };
+
+  // keepSynced forces Firebase to bypass cache and always get server data
+  _hofRef.keepSynced(true);
   _hofRef.on('value', _hofListener, err => {
     console.warn('HOF read error:', err);
     const el = document.getElementById('hofList');
@@ -2313,9 +2318,22 @@ async function autoSubmitHof(sortedPlayers) {
     };
     console.log(`HOF: pushing [${i+1}/${toSubmit.length}]`, entry);
     try {
-      const ref = await db.ref(hofPath()).push(entry);
-      console.log(`HOF: success for ${p.name}, key =`, ref.key);
-      submitted++;
+      const newRef = db.ref(hofPath()).push();
+      await newRef.set({
+        name: p.name,
+        emoji: p.emoji || '',
+        score: p.score,
+        turns: p.turns,
+        timestamp: ts + i,
+      });
+      // Verify it was actually written
+      const check = await newRef.once('value');
+      if (check.exists()) {
+        console.log(`HOF: confirmed on server for ${p.name}, key =`, newRef.key);
+        submitted++;
+      } else {
+        console.error(`HOF: write rejected by server for ${p.name} (rules?)`);
+      }
     } catch(e) {
       console.error(`HOF: FAILED for ${p.name}:`, e.code, e.message);
     }
@@ -2324,8 +2342,11 @@ async function autoSubmitHof(sortedPlayers) {
   console.log('HOF: done,', submitted, 'of', toSubmit.length, 'submitted');
   if (submitted > 0) {
     showToast(`${submitted} score${submitted>1?'s':''} saved to Hall of Fame! 🏆`);
-    // Force a fresh read to ensure UI updates
-    setTimeout(() => listenHof(), 1000);
+    // Fully detach and re-attach listener to force a fresh read
+    setTimeout(() => {
+      if (_hofRef) { _hofRef.off(); _hofRef = null; _hofListener = null; }
+      listenHof();
+    }, 1500);
   }
 }
 
