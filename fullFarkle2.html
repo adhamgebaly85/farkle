@@ -683,6 +683,7 @@ let state = {
   ptHistory: [],
   gameHistory: [],
   nextId: 5,
+  currentArchiveId: null, // ID of archive entry this game came from (null = fresh)
   // Dice-mode state
   dice: [],          // [{val, kept, scoring, used}] × 6
   hasRolled: false,
@@ -733,6 +734,7 @@ function closeHistoryPicker() {
 }
 function historyPickerNewGame() {
   document.getElementById('historyPickerModal').classList.add('hidden');
+  state.currentArchiveId = null;
   showPlayerSetup();
 }
 function renderHistoryPicker(mode) {
@@ -796,6 +798,7 @@ function startGame() {
   state.turnScore=0; state.ptHistory=[]; state.round=1;
   state.inLastLap=false; state.lastLapTriggerIdx=-1; state.lastLapFinishedPlayers=0;
   state.gameHistory=[]; state.snapshots=[];
+  state.currentArchiveId = null; // fresh game — no archive slot to overwrite
   document.getElementById('playerSetupModal').classList.add('hidden');
   applyMode(state.mode);
   resetDiceState();
@@ -828,6 +831,7 @@ function loadFromStorage() {
       // Ensure new fields added after old saves are always present
       if (typeof state.gameStarted === 'undefined') state.gameStarted = false;
       if (typeof state.mode === 'undefined') state.mode = null;
+      if (typeof state.currentArchiveId === 'undefined') state.currentArchiveId = null;
       state.players.forEach(p => {
         if (typeof p.emoji === 'undefined') p.emoji = '';
       });
@@ -1393,8 +1397,10 @@ const MAX_ARCHIVE = 5;
 function archiveCurrentGame(status) {
   // Only archive if at least 1 turn has been played
   if (!state.gameStarted || state.gameHistory.length === 0) return;
+  // Reuse the same archive ID if this game was resumed — overwrites in place
+  const archiveId = state.currentArchiveId || Date.now();
   const entry = {
-    id: Date.now(),
+    id: archiveId,
     timestamp: new Date().toISOString(),
     status,            // 'finished' | 'in_progress'
     mode: state.mode,
@@ -1452,6 +1458,7 @@ function resumeGame(archiveId) {
     state.ptHistory = [];
     state.mode = entry.mode;
     state.gameStarted = true;
+    state.currentArchiveId = entry.id; // remember which archive slot this came from
     Object.assign(SETTINGS, entry.settings);
     document.getElementById('historyModal').classList.add('hidden');
     applyMode(state.mode);
