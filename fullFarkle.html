@@ -565,7 +565,7 @@
 </div>
 
 <!-- Emoji Picker Modal -->
-<div id="emojiPickerModal" class="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+<div id="emojiPickerModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden" style="z-index:200">
   <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xs p-5 shadow-2xl">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-sm font-bold text-slate-100">Pick an emoji</h3>
@@ -585,8 +585,8 @@
         <div class="flex flex-wrap gap-2" id="emojiExpressions"></div>
       </div>
     </div>
-    <button onclick="clearEmoji()" class="w-full mt-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs font-semibold transition">
-      Remove emoji (use initials)
+    <button onclick="clearEmoji()" class="w-full mt-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40 text-red-400 text-xs font-semibold transition flex items-center justify-center space-x-1.5">
+      <i class="fa-solid fa-xmark text-xs"></i><span>Remove emoji — use initials instead</span>
     </button>
   </div>
 </div>
@@ -1371,14 +1371,20 @@ function movePlayer(id, dir) {
 function openEmojiPicker(playerId) {
   _emojiTargetId = playerId;
   const player = state.players.find(p => p.id === playerId);
-  // Populate emoji grids
+  // Populate emoji grids using data-emoji attributes (avoids inline onclick encoding issues)
   ['men','women','expressions'].forEach(cat => {
-    document.getElementById('emoji' + cat.charAt(0).toUpperCase() + cat.slice(1)).innerHTML =
-      EMOJIS[cat].map(e =>
-        `<button onclick="selectEmoji('${e}')"
-          class="w-9 h-9 rounded-lg text-xl flex items-center justify-center transition hover:bg-slate-700 active:scale-90 ${player&&player.emoji===e?'bg-amber-500/20 ring-1 ring-amber-500':'bg-slate-800'}"
-        >${e}</button>`
-      ).join('');
+    const el = document.getElementById('emoji' + cat.charAt(0).toUpperCase() + cat.slice(1));
+    el.innerHTML = '';
+    EMOJIS[cat].forEach(e => {
+      const btn = document.createElement('button');
+      btn.className = 'w-9 h-9 rounded-lg text-xl flex items-center justify-center transition hover:bg-slate-700 active:scale-90 ' +
+        (player && player.emoji === e ? 'bg-amber-500/20 ring-2 ring-amber-500' : 'bg-slate-800');
+      btn.textContent = e;
+      btn.dataset.emoji = e;
+      btn.type = 'button';
+      btn.addEventListener('click', () => selectEmoji(e));
+      el.appendChild(btn);
+    });
   });
   document.getElementById('emojiPickerModal').classList.remove('hidden');
 }
@@ -1393,6 +1399,7 @@ function selectEmoji(emoji) {
   if (p) p.emoji = emoji;
   closeEmojiPicker();
   renderPlayerSetup();
+  showToast('Emoji set to ' + emoji);
 }
 
 function clearEmoji() {
@@ -1400,6 +1407,7 @@ function clearEmoji() {
   if (p) p.emoji = '';
   closeEmojiPicker();
   renderPlayerSetup();
+  showToast('Emoji removed — using initials');
 }
 
 // ─────────────────────────────────────────────────────────
