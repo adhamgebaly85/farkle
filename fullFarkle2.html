@@ -2275,33 +2275,40 @@ function renderHof(entries) {
 
 // ── Auto-submit all players silently to HOF ───────────────
 async function autoSubmitHof(sortedPlayers) {
-  if (!db) return;
+  if (!db) { console.warn('HOF: db not initialized'); return; }
   const user = firebase.auth().currentUser;
   if (!user) {
+    console.warn('HOF: no auth user, retrying in 1.5s');
     setTimeout(() => autoSubmitHof(sortedPlayers), 1500);
     return;
   }
+  console.log('HOF: auth uid =', user.uid);
+  console.log('HOF: path =', hofPath());
   const toSubmit = sortedPlayers.filter(p => p.score > 0);
+  console.log('HOF: submitting', toSubmit.length, 'players:', toSubmit.map(p => p.name + '=' + p.score));
   if (!toSubmit.length) return;
   const ts = Date.now();
   let submitted = 0;
   for (let i = 0; i < toSubmit.length; i++) {
     const p = toSubmit[i];
+    const entry = {
+      name: p.name,
+      emoji: p.emoji || '',
+      score: p.score,
+      turns: p.turns,
+      timestamp: ts + i,
+    };
+    console.log(`HOF: pushing [${i+1}/${toSubmit.length}]`, entry);
     try {
-      await db.ref(hofPath()).push({
-        name: p.name,
-        emoji: p.emoji || '',
-        score: p.score,
-        turns: p.turns,
-        timestamp: ts + i, // slight offset so entries are unique
-      });
+      const ref = await db.ref(hofPath()).push(entry);
+      console.log(`HOF: success for ${p.name}, key =`, ref.key);
       submitted++;
     } catch(e) {
-      console.error('HOF push failed for', p.name, ':', e.code, e.message);
+      console.error(`HOF: FAILED for ${p.name}:`, e.code, e.message);
     }
-    // Small delay between writes to avoid Firebase throttling
-    if (i < toSubmit.length - 1) await new Promise(r => setTimeout(r, 200));
+    if (i < toSubmit.length - 1) await new Promise(r => setTimeout(r, 300));
   }
+  console.log('HOF: done,', submitted, 'of', toSubmit.length, 'submitted');
   if (submitted > 0) showToast(`${submitted} score${submitted>1?'s':''} saved to Hall of Fame! 🏆`);
 }
 
