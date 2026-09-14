@@ -2243,23 +2243,26 @@ function listenHof() {
   if (_hofRef) _hofRef.off();
   _hofRef = db.ref(hofPath());
 
-  // Use a persistent listener but force server fetch (not cache)
-  _hofListener = function(snap) {
-    const entries = [];
-    snap.forEach(child => entries.push({id: child.key, ...child.val()}));
-    entries.sort((a,b) => b.score - a.score || a.turns - b.turns);
-    console.log('HOF listener fired, entries:', entries.length);
-    renderHof(entries.slice(0, 10));
+  const fetchHof = () => {
+    _hofRef.once('value').then(snap => {
+      const entries = [];
+      snap.forEach(child => entries.push({id: child.key, ...child.val()}));
+      entries.sort((a,b) => b.score - a.score || a.turns - b.turns);
+      console.log('HOF fetch, entries:', entries.length);
+      renderHof(entries.slice(0, 10));
+    }).catch(err => {
+      console.warn('HOF read error:', err);
+      const el = document.getElementById('hofList');
+      if (el) el.innerHTML = '<p class="text-xs text-slate-600 px-4 py-3 italic">Leaderboard unavailable.</p>';
+    });
   };
 
-  // keepSynced forces Firebase to bypass cache and always get server data
-  _hofRef.keepSynced(true);
-  _hofRef.on('value', _hofListener, err => {
-    console.warn('HOF read error:', err);
-    const el = document.getElementById('hofList');
-    if (el) el.innerHTML = '<p class="text-xs text-slate-600 px-4 py-3 italic">Leaderboard unavailable.</p>';
-  });
-  console.log('HOF: listener attached to', hofPath());
+  // Fetch immediately
+  fetchHof();
+  // Then refresh every 30 seconds to pick up new scores from other devices
+  if (window._hofPollTimer) clearInterval(window._hofPollTimer);
+  window._hofPollTimer = setInterval(fetchHof, 30000);
+  console.log('HOF: polling started for', hofPath());
 }
 
 function renderHof(entries) {
@@ -2346,8 +2349,7 @@ async function autoSubmitHof(sortedPlayers) {
     setTimeout(() => {
       if (_hofRef) { _hofRef.off(); _hofRef = null; _hofListener = null; }
       listenHof();
-    }, 1500);
-  }
+    }, 1500);  }
 }
 
 // Call initFirebase after page loads
