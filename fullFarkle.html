@@ -1299,35 +1299,80 @@ function renderPlayerSetup() {
   const tag = document.getElementById('setupModeTag');
   if (tag) tag.textContent = state.mode === 'tracker' ? '📋 Score Tracker' : '🎲 Dice Game';
 
-  // Player list
   const list = document.getElementById('setupPlayerList');
-  list.innerHTML = state.players.map((p,i) => {
-    const c = pc(i % COLORS.length);
+  list.innerHTML = '';
+
+  state.players.forEach((p, i) => {
+    const clr = pc(i % COLORS.length);
     const isFirst = i === 0, isLast = i === state.players.length - 1;
     const canDelete = state.players.length > 2;
-    return `<div class="flex items-center space-x-3 bg-slate-950/60 border border-slate-800 rounded-xl px-3 py-2.5">
-      <!-- Avatar / emoji picker trigger -->
-      <button onclick="openEmojiPicker(${p.id})"
-        class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-dashed border-slate-700 hover:border-amber-500/60 transition ${p.emoji?'text-xl':'text-xs font-black'}"
-        style="background:${c.bg};color:${c.text}" title="Pick emoji">
-        ${p.emoji || ini(p.name)}
-      </button>
-      <!-- Name input -->
-      <input type="text" value="${p.name}" maxlength="18"
-        oninput="updatePlayerName(${p.id},this.value)"
-        onkeydown="if(event.key==='Enter')this.blur()"
-        class="flex-1 bg-transparent text-sm font-semibold text-slate-100 outline-none border-b border-transparent focus:border-amber-500/60 transition pb-0.5 min-w-0">
-      <!-- Reorder -->
-      <div class="flex flex-col space-y-0.5 flex-shrink-0">
-        <button onclick="movePlayer(${p.id},-1)" ${isFirst?'disabled':''} class="w-5 h-5 rounded flex items-center justify-center text-slate-500 hover:text-amber-400 disabled:opacity-20 transition text-[10px]">▲</button>
-        <button onclick="movePlayer(${p.id},+1)" ${isLast?'disabled':''} class="w-5 h-5 rounded flex items-center justify-center text-slate-500 hover:text-amber-400 disabled:opacity-20 transition text-[10px]">▼</button>
-      </div>
-      <!-- Delete -->
-      <button onclick="setupDeletePlayer(${p.id})" ${!canDelete?'disabled':''} class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition disabled:opacity-20 flex-shrink-0">
-        <i class="fa-solid fa-trash-can text-[10px]"></i>
-      </button>
-    </div>`;
-  }).join('');
+
+    // Row container
+    const row = document.createElement('div');
+    row.className = 'flex items-center space-x-3 bg-slate-950/60 border border-slate-800 rounded-xl px-3 py-2.5';
+
+    // ── Avatar / emoji picker button ──
+    const avatarBtn = document.createElement('button');
+    avatarBtn.type = 'button';
+    avatarBtn.title = p.emoji ? 'Change emoji' : 'Pick emoji';
+    avatarBtn.style.cssText = `background:${clr.bg};color:${clr.text};width:40px;height:40px;border-radius:50%;border:2px dashed #334155;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:${p.emoji?'20px':'11px'};font-weight:700;cursor:pointer;transition:border-color 0.15s;`;
+    avatarBtn.textContent = p.emoji || ini(p.name);
+    avatarBtn.addEventListener('mouseover', () => avatarBtn.style.borderColor = '#f59e0b');
+    avatarBtn.addEventListener('mouseout',  () => avatarBtn.style.borderColor = '#334155');
+    avatarBtn.addEventListener('click', (e) => { e.stopPropagation(); openEmojiPicker(p.id); });
+
+    // ── Name input ──
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = p.name;
+    nameInput.maxLength = 18;
+    nameInput.placeholder = 'Player name';
+    nameInput.className = 'flex-1 bg-transparent text-sm font-semibold text-slate-100 outline-none border-b border-transparent focus:border-amber-500 transition pb-0.5 min-w-0';
+    nameInput.addEventListener('input', () => updatePlayerName(p.id, nameInput.value));
+    nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') nameInput.blur(); });
+
+    // ── Reorder buttons ──
+    const reorderWrap = document.createElement('div');
+    reorderWrap.className = 'flex flex-col flex-shrink-0';
+    reorderWrap.style.gap = '2px';
+
+    const upBtn = document.createElement('button');
+    upBtn.type = 'button'; upBtn.textContent = '▲';
+    upBtn.disabled = isFirst;
+    upBtn.style.cssText = 'width:20px;height:20px;font-size:10px;display:flex;align-items:center;justify-content:center;color:#64748b;border-radius:4px;cursor:pointer;background:none;border:none;';
+    upBtn.addEventListener('click', () => movePlayer(p.id, -1));
+    if (!isFirst) upBtn.addEventListener('mouseover', () => upBtn.style.color='#f59e0b');
+    if (!isFirst) upBtn.addEventListener('mouseout',  () => upBtn.style.color='#64748b');
+
+    const dnBtn = document.createElement('button');
+    dnBtn.type = 'button'; dnBtn.textContent = '▼';
+    dnBtn.disabled = isLast;
+    dnBtn.style.cssText = 'width:20px;height:20px;font-size:10px;display:flex;align-items:center;justify-content:center;color:#64748b;border-radius:4px;cursor:pointer;background:none;border:none;';
+    dnBtn.addEventListener('click', () => movePlayer(p.id, +1));
+    if (!isLast) dnBtn.addEventListener('mouseover', () => dnBtn.style.color='#f59e0b');
+    if (!isLast) dnBtn.addEventListener('mouseout',  () => dnBtn.style.color='#64748b');
+
+    reorderWrap.appendChild(upBtn);
+    reorderWrap.appendChild(dnBtn);
+
+    // ── Delete button ──
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.disabled = !canDelete;
+    delBtn.innerHTML = '<i class="fa-solid fa-trash-can" style="font-size:10px"></i>';
+    delBtn.style.cssText = `width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:${canDelete?'#475569':'#1e293b'};cursor:${canDelete?'pointer':'default'};background:none;border:none;transition:color 0.15s,background 0.15s;flex-shrink:0;`;
+    if (canDelete) {
+      delBtn.addEventListener('mouseover', () => { delBtn.style.color='#f87171'; delBtn.style.background='rgba(239,68,68,0.1)'; });
+      delBtn.addEventListener('mouseout',  () => { delBtn.style.color='#475569'; delBtn.style.background='none'; });
+      delBtn.addEventListener('click', () => setupDeletePlayer(p.id));
+    }
+
+    row.appendChild(avatarBtn);
+    row.appendChild(nameInput);
+    row.appendChild(reorderWrap);
+    row.appendChild(delBtn);
+    list.appendChild(row);
+  });
 
   // Start button state
   const btn = document.getElementById('startGameBtn');
@@ -1482,7 +1527,7 @@ function showWinner() {
     const c=pc(p.colorIdx);
     const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`;
     return `<div class="flex items-center justify-between py-1.5 px-3 rounded-lg" style="background:${c.bg}">
-      <div class="flex items-center space-x-2"><span class="text-sm">${medal}</span><span class="text-sm font-bold" style="color:${c.text}">${p.emoji?p.emoji+' ':''}{p.name}</span></div>
+      <div class="flex items-center space-x-2"><span class="text-sm">${medal}</span><span class="text-sm font-bold" style="color:${c.text}">${p.emoji?p.emoji+' ':''+(p.name||'')}'}</span></div>
       <span class="text-sm font-black" style="color:${c.text}">${p.score.toLocaleString()} pts</span>
     </div>`;
   }).join('');
@@ -1552,7 +1597,7 @@ function renderLeaderboard() {
       <div class="flex-1 min-w-0">
         <div class="flex items-center space-x-1.5 mb-1">
           <span class="text-sm">${medal}</span>
-          <span class="text-xs font-semibold truncate ${isActive?'text-slate-100':'text-slate-400'}">${p.emoji?p.emoji+' ':''}{p.name}</span>
+          <span class="text-xs font-semibold truncate ${isActive?'text-slate-100':'text-slate-400'}">${p.emoji?p.emoji+' ':''}${p.name}</span>
           ${reached?'<span class="text-[10px] text-amber-400">🏁</span>':''}
         </div>
         <div class="h-1.5 rounded-full overflow-hidden bg-slate-800">
