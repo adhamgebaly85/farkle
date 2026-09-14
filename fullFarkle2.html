@@ -176,7 +176,7 @@
         <h2 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
           <i class="fa-solid fa-crown text-amber-400 text-xs"></i><span>Hall of Fame</span>
         </h2>
-        <span class="text-[10px] text-slate-600">Top 10 · Target 10,000</span>
+        <span id="hofSidebarGroup" class="text-[10px] text-slate-600">Top 10 · Target 10,000</span>
       </div>
       <div id="hofList" class="divide-y divide-slate-800/60">
         <p class="text-xs text-slate-600 px-4 py-3 italic">Loading…</p>
@@ -535,6 +535,16 @@
           <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 translate-x-5"></span>
         </button>
       </div>
+      <div class="flex items-center justify-between bg-slate-950/60 rounded-xl px-4 py-3 border border-slate-800">
+        <div>
+          <div class="text-sm font-semibold text-slate-200">Group ID</div>
+          <div class="text-[11px] text-slate-500">Shared Hall of Fame with your group</div>
+        </div>
+        <input type="text" id="s_groupId" placeholder="e.g. figo-crew" maxlength="24"
+          oninput="SETTINGS.groupId=this.value.trim().toLowerCase()"
+          style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:6px 10px;color:#f59e0b;font-weight:700;font-size:12px;width:130px;text-align:right;font-family:inherit;outline:none;"
+          onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='#334155'">
+      </div>
     </div>
     <button onclick="closeSettingsModal()" class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm transition shadow-lg shadow-amber-500/20">Done</button>
   </div>
@@ -674,7 +684,7 @@
         <h2 class="text-lg font-black text-slate-100 flex items-center space-x-2">
           <i class="fa-solid fa-crown text-amber-400"></i><span>Hall of Fame</span>
         </h2>
-        <p class="text-xs text-slate-500 mt-0.5">Top 10 all-time · Target 10,000</p>
+        <p class="text-xs text-slate-500 mt-0.5">Top 10 all-time · Target 10,000 · Group: <span id="hofGroupLabel" style="color:#f59e0b;font-weight:700">—</span></p>
       </div>
       <button onclick="closeHofViewModal()" class="text-slate-400 hover:text-white transition">
         <i class="fa-solid fa-xmark text-lg"></i>
@@ -682,24 +692,6 @@
     </div>
     <div class="flex-1 overflow-y-auto" id="hofViewList">
       <p class="text-xs text-slate-600 px-4 py-6 italic text-center">Loading…</p>
-    </div>
-  </div>
-</div>
-
-<!-- Hall of Fame Submission Modal -->
-<div id="hofModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 hidden">
-  <div class="bg-slate-900 border border-amber-500/30 rounded-3xl w-full max-w-sm p-6 shadow-2xl space-y-4">
-    <div class="text-center">
-      <div class="text-4xl mb-2">🏆</div>
-      <h3 class="text-lg font-black text-slate-100">Submit to Hall of Fame?</h3>
-      <p class="text-xs text-slate-500 mt-1">Target was 10,000 — eligible for the all-time leaderboard!</p>
-    </div>
-    <div id="hofPlayersList" class="space-y-2"></div>
-    <div class="flex space-x-3">
-      <button onclick="closeHofModal()" class="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-semibold text-sm transition">Skip</button>
-      <button onclick="submitHofScores()" class="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-sm transition shadow-lg shadow-amber-500/20">
-        <i class="fa-solid fa-crown mr-1.5"></i>Submit!
-      </button>
     </div>
   </div>
 </div>
@@ -715,7 +707,7 @@
 // ─────────────────────────────────────────────────────────
 // SETTINGS
 // ─────────────────────────────────────────────────────────
-const SETTINGS = { target:10000, minBank:0, maxUndo:3, lastLap:true };
+const SETTINGS = { target:10000, minBank:0, maxUndo:3, lastLap:true, groupId:'' };
 
 // ─────────────────────────────────────────────────────────
 // PLAYER COLORS
@@ -1915,11 +1907,18 @@ function confirmNewGame() {
 // SETTINGS
 // ─────────────────────────────────────────────────────────
 function openSettingsModal() { syncSettingsUI(); document.getElementById('settingsModal').classList.remove('hidden'); }
-function closeSettingsModal() { document.getElementById('settingsModal').classList.add('hidden'); renderAll(); }
+function closeSettingsModal() {
+  document.getElementById('settingsModal').classList.add('hidden');
+  // Re-attach Firebase listener for new group if groupId changed
+  listenHof();
+  renderAll();
+}
 function syncSettingsUI() {
   document.getElementById('s_target').textContent  = SETTINGS.target.toLocaleString();
   document.getElementById('s_minBank').textContent = SETTINGS.minBank.toLocaleString();
   document.getElementById('s_maxUndo').textContent = SETTINGS.maxUndo;
+  const gid = document.getElementById('s_groupId');
+  if (gid) gid.value = SETTINGS.groupId || '';
   const btn = document.getElementById('s_lastLap');
   if (SETTINGS.lastLap) { btn.classList.add('bg-amber-500','border-amber-400'); btn.classList.remove('bg-slate-700','border-slate-600'); btn.querySelector('span').style.transform='translateX(20px)'; }
   else { btn.classList.remove('bg-amber-500','border-amber-400'); btn.classList.add('bg-slate-700','border-slate-600'); btn.querySelector('span').style.transform='translateX(0)'; }
@@ -1954,8 +1953,8 @@ function showWinner() {
   }).join('');
   document.getElementById('newTargetLabel').textContent=(SETTINGS.target+5000).toLocaleString();
   document.getElementById('winnerModal').classList.remove('hidden');
-  // Offer HOF submission for 10,000-target games
-  setTimeout(() => maybeShowHofModal(sorted), 800);
+  // Auto-submit all players to HOF for 10,000-target games
+  if (SETTINGS.target === 10000) autoSubmitHof(sorted);
 }
 function startNewGameFromWinner() {
   document.getElementById('winnerModal').classList.add('hidden');
@@ -2185,7 +2184,6 @@ const firebaseConfig = {
 };
 
 let db = null;
-let _hofPendingPlayers = [];
 
 function initFirebase() {
   try {
@@ -2209,7 +2207,8 @@ function initFirebase() {
 // ── Listen to top 10 scores live ─────────────────────────
 function openHofViewModal() {
   document.getElementById('hofViewModal').classList.remove('hidden');
-  // Populate from live hofList content or re-render
+  const lbl = document.getElementById('hofGroupLabel');
+  if (lbl) lbl.textContent = SETTINGS.groupId || 'default';
   const src = document.getElementById('hofList');
   const dst = document.getElementById('hofViewList');
   if (src) dst.innerHTML = src.innerHTML;
@@ -2218,24 +2217,38 @@ function closeHofViewModal() {
   document.getElementById('hofViewModal').classList.add('hidden');
 }
 
+let _hofListener = null;
+let _hofRef = null;
+
+function hofPath() {
+  const gid = (SETTINGS.groupId||'').trim().toLowerCase();
+  return gid ? `groups/${gid}/leaderboard` : 'leaderboard/default';
+}
+
 function listenHof() {
   if (!db) return;
-  db.ref('leaderboard').orderByChild('score').limitToLast(10).on('value', snap => {
+  // Detach previous listener if path changed
+  if (_hofRef) _hofRef.off('value', _hofListener);
+  _hofRef = db.ref(hofPath());
+  _hofListener = _hofRef.orderByChild('score').limitToLast(10).on('value', snap => {
     const entries = [];
     snap.forEach(child => entries.push({id: child.key, ...child.val()}));
     entries.sort((a,b) => b.score - a.score || a.turns - b.turns);
     renderHof(entries);
   }, err => {
     console.warn('HOF read error:', err);
-    document.getElementById('hofList').innerHTML =
-      '<p class="text-xs text-slate-600 px-4 py-3 italic">Leaderboard unavailable.</p>';
+    const el = document.getElementById('hofList');
+    if (el) el.innerHTML = '<p class="text-xs text-slate-600 px-4 py-3 italic">Leaderboard unavailable.</p>';
   });
 }
 
 function renderHof(entries) {
   const el = document.getElementById('hofList');
+  const sidebarGrp = document.getElementById('hofSidebarGroup');
+  if (sidebarGrp) sidebarGrp.textContent = SETTINGS.groupId ? `Group: ${SETTINGS.groupId}` : 'Top 10 · No group set';
   if (!entries.length) {
-    el.innerHTML = '<p class="text-xs text-slate-600 px-4 py-3 italic">No scores yet — be the first!</p>';
+    const gidLabel = SETTINGS.groupId ? `<span style="color:#f59e0b;font-weight:700">${SETTINGS.groupId}</span>` : '<span style="color:#475569">no group set</span>';
+    el.innerHTML = `<p class="text-xs text-slate-600 px-4 py-3 italic text-center">No scores yet for ${gidLabel} — be the first!</p>`;
     return;
   }
   el.innerHTML = entries.map((e, i) => {
@@ -2258,65 +2271,32 @@ function renderHof(entries) {
   }
 }
 
-// ── Show HOF submission modal after a 10,000-target game ─
-function maybeShowHofModal(sortedPlayers) {
-  if (SETTINGS.target !== 10000) return; // only for standard 10k games
-  _hofPendingPlayers = sortedPlayers.filter(p => p.score > 0);
-  if (!_hofPendingPlayers.length) return;
-
-  const listEl = document.getElementById('hofPlayersList');
-  listEl.innerHTML = '';
-  _hofPendingPlayers.forEach((p, i) => {
-    const c = pc(p.colorIdx);
-    const row = document.createElement('div');
-    row.style.cssText = `display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:${c.bg};`;
-    row.innerHTML = `
-      <span style="font-size:20px;flex-shrink:0">${p.emoji||ini(p.name)}</span>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:600;color:${c.text}">${p.name}</div>
-        <div style="font-size:11px;color:${c.text};opacity:0.7">${p.score.toLocaleString()} pts · ${p.turns} turns</div>
-      </div>
-      <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-        <input type="checkbox" id="hof_check_${p.id}" checked style="accent-color:#f59e0b;width:16px;height:16px">
-        <span style="font-size:11px;color:${c.text}">Submit</span>
-      </label>`;
-    listEl.appendChild(row);
-  });
-
-  document.getElementById('hofModal').classList.remove('hidden');
-}
-
-function closeHofModal() {
-  document.getElementById('hofModal').classList.add('hidden');
-}
-
-async function submitHofScores() {
-  if (!db) { showToast('Leaderboard unavailable.','error'); closeHofModal(); return; }
+// ── Auto-submit all players silently to HOF ───────────────
+async function autoSubmitHof(sortedPlayers) {
+  if (!db) return;
   const user = firebase.auth().currentUser;
-  if (!user) { showToast('Not authenticated — try again.','error'); closeHofModal(); return; }
-  const toSubmit = _hofPendingPlayers.filter(p => {
-    const cb = document.getElementById(`hof_check_${p.id}`);
-    return cb && cb.checked;
-  });
-  if (!toSubmit.length) { closeHofModal(); return; }
-
+  if (!user) {
+    setTimeout(() => autoSubmitHof(sortedPlayers), 1500);
+    return;
+  }
+  const toSubmit = sortedPlayers.filter(p => p.score > 0);
+  if (!toSubmit.length) return;
   try {
-    for (const p of toSubmit) {
-      const entry = {
+    const ts = Date.now();
+    // Push all entries in parallel
+    await Promise.all(toSubmit.map(p =>
+      db.ref(hofPath()).push({
         name: p.name,
         emoji: p.emoji || '',
         score: p.score,
         turns: p.turns,
-        timestamp: Date.now(),
-      };
-      await db.ref('leaderboard').push(entry);
-    }
-    showToast('Scores submitted to Hall of Fame! 🏆');
+        timestamp: ts,
+      }).catch(e => console.error('HOF push failed for', p.name, e))
+    ));
+    showToast('Scores saved to Hall of Fame! 🏆');
   } catch(e) {
     console.error('HOF submit error:', e);
-    showToast('Failed to submit scores.','error');
   }
-  closeHofModal();
 }
 
 // Call initFirebase after page loads
