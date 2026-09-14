@@ -137,8 +137,11 @@
         <h2 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
           <i class="fa-solid fa-clock-rotate-left text-amber-400 text-xs"></i><span>Recent Turns</span>
         </h2>
+        <span id="turnCountBadge" class="text-[10px] text-slate-500 font-medium"></span>
+        <h2 class="hidden">
+        </h2>
       </div>
-      <div id="recentTurns" class="divide-y divide-slate-800/60 max-h-44 overflow-y-auto">
+      <div id="recentTurns" class="divide-y divide-slate-800/60 overflow-y-auto" style="max-height:480px">
         <p class="text-xs text-slate-500 px-4 py-3 italic">No turns yet.</p>
       </div>
     </div>
@@ -1614,14 +1617,21 @@ function renderLeaderboard() {
 
 function renderRecentTurns() {
   const el=document.getElementById('recentTurns');
-  const recent=state.gameHistory.slice(0,8);
-  if(!recent.length){el.innerHTML='<p class="text-xs text-slate-600 px-4 py-3 italic">No turns yet.</p>';return;}
-  el.innerHTML=recent.map(h=>{
+  const all=state.gameHistory;
+  // Update turn count badge
+  const badge=document.getElementById('turnCountBadge');
+  if(badge) badge.textContent=all.length?all.length+' turn'+(all.length===1?'':'s'):'';
+  if(!all.length){el.innerHTML='<p class="text-xs text-slate-600 px-4 py-3 italic">No turns yet.</p>';return;}
+  el.innerHTML=all.map((h,idx)=>{
     const c=pc(h.colorIdx);
+    const turnNum=all.length-idx; // most recent first, so label descending
     return `<div class="flex items-center space-x-3 px-4 py-2.5">
       <div class="w-6 h-6 rounded-full flex items-center justify-center ${h.emoji?'text-sm':'text-[10px] font-black'} flex-shrink-0" style="background:${c.bg};color:${c.text}">${h.emoji||ini(h.who)}</div>
-      <span class="text-xs text-slate-400 flex-1">${h.who} · T${h.turn}</span>
-      <span class="text-xs font-bold ${h.farkle?'text-red-400':''}" style="${!h.farkle?'color:'+c.text:''}">${h.farkle?'Farkle!':'+'+h.pts.toLocaleString()}</span>
+      <div class="flex-1 min-w-0">
+        <div class="text-xs text-slate-300 font-medium truncate">${h.who}</div>
+        <div class="text-[10px] text-slate-600">Turn ${h.turn}</div>
+      </div>
+      <span class="text-xs font-bold flex-shrink-0 ${h.farkle?'text-red-400':''}" style="${!h.farkle?'color:'+c.text:''}">${h.farkle?'💀 Farkle':'+'+h.pts.toLocaleString()}</span>
     </div>`;
   }).join('');
 }
