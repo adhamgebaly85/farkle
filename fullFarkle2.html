@@ -773,6 +773,13 @@ function renderHistoryPicker(mode) {
       </div>
       <div class="flex flex-wrap gap-1.5">${playerPills}</div>`;
 
+    // Delete button overlay (bottom right of card)
+    const pickerDel = document.createElement('button');
+    pickerDel.className = 'mt-2 flex items-center space-x-1 text-[10px] text-slate-600 hover:text-red-400 transition';
+    pickerDel.innerHTML = '<i class="fa-solid fa-trash-can text-[9px]"></i><span>Delete from history</span>';
+    pickerDel.addEventListener('click', (e) => { e.stopPropagation(); deleteArchiveEntry(entry.id, 'picker'); });
+    card.appendChild(pickerDel);
+
     list.appendChild(card);
   });
 }
@@ -1469,6 +1476,15 @@ function resumeGame(archiveId) {
   }
 }
 
+function deleteArchiveEntry(id, source) {
+  if (!confirm('Delete this game from history?')) return;
+  archive = archive.filter(a => a.id !== id);
+  saveToStorage();
+  if (source === 'picker') renderHistoryPicker(state.mode);
+  else renderHistoryModal();
+  showToast('Game removed from history');
+}
+
 function openHistoryModal() {
   renderHistoryModal();
   document.getElementById('historyModal').classList.remove('hidden');
@@ -1522,14 +1538,26 @@ function renderHistoryModal() {
       </div>`;
 
     // Resume button
+    // Button group: delete + resume
+    const btnGroup = document.createElement('div');
+    btnGroup.className = 'ml-3 flex flex-col space-y-1.5 flex-shrink-0';
+
     const resumeBtn = document.createElement('button');
-    resumeBtn.className = 'ml-3 flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition active:scale-95 ' +
+    resumeBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold transition active:scale-95 ' +
       (isFinished
         ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
         : 'bg-amber-500 hover:bg-amber-400 text-slate-950');
     resumeBtn.textContent = isFinished ? 'Play again' : 'Resume';
     resumeBtn.addEventListener('click', () => resumeGame(entry.id));
-    hdr.appendChild(resumeBtn);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 hover:border-red-500/40 transition active:scale-95';
+    delBtn.innerHTML = '<i class="fa-solid fa-trash-can text-[10px] mr-1"></i>Delete';
+    delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteArchiveEntry(entry.id, 'history'); });
+
+    btnGroup.appendChild(resumeBtn);
+    btnGroup.appendChild(delBtn);
+    hdr.appendChild(btnGroup);
     card.appendChild(hdr);
 
     // Turn history (collapsed)
