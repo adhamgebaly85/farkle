@@ -96,6 +96,10 @@
       <i class="fa-solid fa-gear text-amber-400"></i>
       <span class="hidden sm:inline">Settings</span>
     </button>
+    <button id="saveExitBtn" onclick="saveAndExit()" class="px-3 py-2 rounded-xl bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30 transition text-xs font-semibold hidden items-center space-x-1.5 active:scale-95">
+      <i class="fa-solid fa-floppy-disk"></i>
+      <span class="hidden sm:inline">Save & Exit</span>
+    </button>
     <button onclick="confirmNewGame()" class="px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition text-xs font-semibold flex items-center space-x-1.5 active:scale-95">
       <i class="fa-solid fa-rotate-right"></i>
       <span class="hidden sm:inline">New Game</span>
@@ -1794,6 +1798,31 @@ function deletePlayer(id) {
 // ─────────────────────────────────────────────────────────
 // NEW GAME
 // ─────────────────────────────────────────────────────────
+function saveAndExit() {
+  if (!state.gameStarted || state.gameHistory.length === 0) {
+    showToast('No turns played yet — nothing to save.', 'error'); return;
+  }
+  archiveCurrentGame('in_progress');
+  // Reset state cleanly
+  state.players.forEach(p=>{p.score=0;p.turns=0;p.history=[];});
+  state.turnScore=0;state.ptHistory=[];state.round=1;
+  state.inLastLap=false;state.lastLapTriggerIdx=-1;state.lastLapFinishedPlayers=0;
+  state.gameHistory=[];state.snapshots=[];state.mode=null;state.gameStarted=false;
+  state.currentArchiveId=null;
+  resetDiceState();
+  updateSaveExitBtn();
+  showModeModal();
+  renderAll();
+  showToast('Game saved! You can resume it later.');
+}
+
+function updateSaveExitBtn() {
+  const btn = document.getElementById('saveExitBtn');
+  if (!btn) return;
+  const show = state.gameStarted && state.gameHistory.length > 0;
+  btn.style.display = show ? 'flex' : 'none';
+}
+
 function confirmNewGame() {
   if (!confirm('Start a new game? All scores will be reset.')) return;
   archiveCurrentGame('in_progress');
@@ -1831,6 +1860,10 @@ function toggleSetting(key) { SETTINGS[key]=!SETTINGS[key]; syncSettingsUI(); }
 // WINNER
 // ─────────────────────────────────────────────────────────
 function showWinner() {
+  // Remove the in_progress entry for this game (if it was saved via Save & Exit before)
+  if (state.currentArchiveId) {
+    archive = archive.filter(a => a.id !== state.currentArchiveId);
+  }
   archiveCurrentGame('finished');
   const sorted=[...state.players].sort((a,b)=>b.score-a.score||a.turns-b.turns);
   const w=sorted[0];
@@ -1880,6 +1913,7 @@ function renderAll() {
   updateBankBtn();
   updateUndoBtn();
   if (state.mode==='dice') { renderDiceGrid(); updateRollBtn(); }
+  updateSaveExitBtn();
   saveToStorage();
 }
 
