@@ -1527,7 +1527,7 @@ function showWinner() {
     const c=pc(p.colorIdx);
     const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`;
     return `<div class="flex items-center justify-between py-1.5 px-3 rounded-lg" style="background:${c.bg}">
-      <div class="flex items-center space-x-2"><span class="text-sm">${medal}</span><span class="text-sm font-bold" style="color:${c.text}">${p.emoji?p.emoji+' ':''+(p.name||'')}'}</span></div>
+      <div class="flex items-center space-x-2"><span class="text-sm">${medal}</span><span class="text-sm font-bold" style="color:${c.text}">${p.emoji?p.emoji+' ':''}${p.name}</span></div>
       <span class="text-sm font-black" style="color:${c.text}">${p.score.toLocaleString()} pts</span>
     </div>`;
   }).join('');
