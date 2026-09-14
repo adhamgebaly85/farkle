@@ -2235,14 +2235,16 @@ function hofPath() {
 function listenHof() {
   if (!db) return;
   // Detach previous listener if path changed
-  if (_hofRef) _hofRef.off('value', _hofListener);
+  if (_hofRef && _hofListener) { _hofRef.off('value', _hofListener); }
   _hofRef = db.ref(hofPath());
-  _hofListener = _hofRef.orderByChild('score').limitToLast(10).on('value', snap => {
+  _hofListener = function(snap) {
     const entries = [];
     snap.forEach(child => entries.push({id: child.key, ...child.val()}));
+    // Sort all entries by score desc, take top 10
     entries.sort((a,b) => b.score - a.score || a.turns - b.turns);
-    renderHof(entries);
-  }, err => {
+    renderHof(entries.slice(0, 10));
+  };
+  _hofRef.on('value', _hofListener, err => {
     console.warn('HOF read error:', err);
     const el = document.getElementById('hofList');
     if (el) el.innerHTML = '<p class="text-xs text-slate-600 px-4 py-3 italic">Leaderboard unavailable.</p>';
