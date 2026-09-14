@@ -2234,14 +2234,14 @@ function hofPath() {
 
 function listenHof() {
   if (!db) return;
-  // Detach previous listener if path changed
-  if (_hofRef && _hofListener) { _hofRef.off('value', _hofListener); }
+  // Detach ALL listeners on the old ref before switching
+  if (_hofRef) _hofRef.off();
   _hofRef = db.ref(hofPath());
   _hofListener = function(snap) {
     const entries = [];
     snap.forEach(child => entries.push({id: child.key, ...child.val()}));
-    // Sort all entries by score desc, take top 10
     entries.sort((a,b) => b.score - a.score || a.turns - b.turns);
+    console.log('HOF listener fired, entries:', entries.length);
     renderHof(entries.slice(0, 10));
   };
   _hofRef.on('value', _hofListener, err => {
@@ -2249,6 +2249,7 @@ function listenHof() {
     const el = document.getElementById('hofList');
     if (el) el.innerHTML = '<p class="text-xs text-slate-600 px-4 py-3 italic">Leaderboard unavailable.</p>';
   });
+  console.log('HOF: listener attached to', hofPath());
 }
 
 function renderHof(entries) {
@@ -2316,7 +2317,11 @@ async function autoSubmitHof(sortedPlayers) {
     if (i < toSubmit.length - 1) await new Promise(r => setTimeout(r, 300));
   }
   console.log('HOF: done,', submitted, 'of', toSubmit.length, 'submitted');
-  if (submitted > 0) showToast(`${submitted} score${submitted>1?'s':''} saved to Hall of Fame! 🏆`);
+  if (submitted > 0) {
+    showToast(`${submitted} score${submitted>1?'s':''} saved to Hall of Fame! 🏆`);
+    // Force a fresh read to ensure UI updates
+    setTimeout(() => listenHof(), 1000);
+  }
 }
 
 // Call initFirebase after page loads
