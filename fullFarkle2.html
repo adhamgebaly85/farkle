@@ -477,10 +477,15 @@
         </div>
       </button>
     </div>
+    <!-- Hall of Fame link -->
+    <button onclick="openHofViewModal()"
+      style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:12px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);color:#f59e0b;font-size:13px;font-weight:700;cursor:pointer;transition:background 0.15s;"
+      onmouseover="this.style.background='rgba(245,158,11,0.12)'" onmouseout="this.style.background='rgba(245,158,11,0.06)'">
+      <i class="fa-solid fa-crown" style="font-size:12px"></i>
+      <span>View Hall of Fame</span>
+    </button>
   </div>
 </div>
-
-<!-- Add Player -->
 <div id="addPlayerModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
   <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
     <div class="flex items-center justify-between pb-3 border-b border-slate-800">
