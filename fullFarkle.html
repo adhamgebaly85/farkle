@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#07090e">
 <title>Farkle Master Pro</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>">
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -115,9 +116,7 @@
         <h2 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
           <i class="fa-solid fa-list-ol text-amber-400 text-xs"></i><span>Turn Order</span>
         </h2>
-        <button onclick="openAddPlayerModal()" class="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[11px] transition flex items-center space-x-1 active:scale-95">
-          <i class="fa-solid fa-user-plus text-[10px]"></i><span>Add</span>
-        </button>
+
       </div>
       <div id="turnOrderList" class="divide-y divide-slate-800/60 max-h-56 overflow-y-auto"></div>
     </div>
@@ -524,6 +523,74 @@
   </div>
 </div>
 
+
+<!-- Player Setup Modal -->
+<div id="playerSetupModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 hidden">
+  <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md shadow-2xl flex flex-col max-h-[90vh]">
+
+    <!-- Header -->
+    <div class="px-6 pt-6 pb-4 border-b border-slate-800 flex-shrink-0">
+      <div class="flex items-center justify-between mb-1">
+        <h2 class="text-lg font-black text-slate-100">Player Setup</h2>
+        <div id="setupModeTag" class="text-[11px] px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold"></div>
+      </div>
+      <p class="text-xs text-slate-500">Add players, pick an emoji, set the order — then start!</p>
+    </div>
+
+    <!-- Player list -->
+    <div class="flex-1 overflow-y-auto px-4 py-3 space-y-2" id="setupPlayerList"></div>
+
+    <!-- Add player row -->
+    <div class="px-4 py-3 border-t border-slate-800/60 flex-shrink-0">
+      <div class="flex space-x-2">
+        <input type="text" id="setupNewName" placeholder="Player name…" maxlength="18"
+          onkeydown="if(event.key==='Enter')setupAddPlayer()"
+          class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-100 placeholder-slate-600 text-sm focus:outline-none focus:border-amber-500 transition">
+        <button onclick="setupAddPlayer()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-400 font-bold text-sm transition active:scale-95">
+          <i class="fa-solid fa-user-plus"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-4 pb-5 flex space-x-3 flex-shrink-0">
+      <button onclick="showModeModal()" class="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-semibold text-sm transition active:scale-95 flex items-center justify-center space-x-2">
+        <i class="fa-solid fa-arrow-left text-xs"></i><span>Back</span>
+      </button>
+      <button onclick="startGame()" id="startGameBtn" class="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-sm transition shadow-lg shadow-amber-500/20 active:scale-95 flex items-center justify-center space-x-2">
+        <i class="fa-solid fa-play text-xs"></i><span>Start Game</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Emoji Picker Modal -->
+<div id="emojiPickerModal" class="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xs p-5 shadow-2xl">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-bold text-slate-100">Pick an emoji</h3>
+      <button onclick="closeEmojiPicker()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="space-y-3">
+      <div>
+        <div class="text-[10px] uppercase tracking-wider text-slate-600 font-semibold mb-2">Men</div>
+        <div class="flex flex-wrap gap-2" id="emojiMen"></div>
+      </div>
+      <div>
+        <div class="text-[10px] uppercase tracking-wider text-slate-600 font-semibold mb-2">Women</div>
+        <div class="flex flex-wrap gap-2" id="emojiWomen"></div>
+      </div>
+      <div>
+        <div class="text-[10px] uppercase tracking-wider text-slate-600 font-semibold mb-2">Expressions</div>
+        <div class="flex flex-wrap gap-2" id="emojiExpressions"></div>
+      </div>
+    </div>
+    <button onclick="clearEmoji()" class="w-full mt-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs font-semibold transition">
+      Remove emoji (use initials)
+    </button>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="toast" class="fixed top-20 right-4 z-50 transform -translate-y-40 opacity-0 transition-all duration-300 bg-slate-900 border border-slate-700 text-slate-100 px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 pointer-events-none max-w-xs">
   <div id="toastIcon" class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm flex-shrink-0"><i class="fa-solid fa-check"></i></div>
@@ -552,17 +619,19 @@ const COLORS = [
 ];
 const pc  = i => COLORS[i % COLORS.length];
 const ini = n => { const p=n.trim().split(/\s+/); return p.length>=2?(p[0][0]+p[p.length-1][0]).toUpperCase():n.slice(0,2).toUpperCase(); };
+const avatar = p => p.emoji || ini(p.name);
 
 // ─────────────────────────────────────────────────────────
 // STATE
 // ─────────────────────────────────────────────────────────
 let state = {
-  mode: null,   // 'tracker' | 'dice' — null = not chosen yet
+  mode: null,         // 'tracker' | 'dice' — null = not chosen yet
+  gameStarted: false,  // true once player setup is confirmed
   players: [
-    {id:1,name:'Figo', colorIdx:0,score:0,turns:0,history:[]},
-    {id:2,name:'Adham',colorIdx:1,score:0,turns:0,history:[]},
-    {id:3,name:'Dody', colorIdx:2,score:0,turns:0,history:[]},
-    {id:4,name:'Emma', colorIdx:3,score:0,turns:0,history:[]},
+    {id:1,name:'Figo', emoji:'',colorIdx:0,score:0,turns:0,history:[]},
+    {id:2,name:'Adham',emoji:'',colorIdx:1,score:0,turns:0,history:[]},
+    {id:3,name:'Dody', emoji:'',colorIdx:2,score:0,turns:0,history:[]},
+    {id:4,name:'Emma', emoji:'',colorIdx:3,score:0,turns:0,history:[]},
   ],
   activePlayerId: 1,
   turnScore: 0,
@@ -587,9 +656,10 @@ let state = {
 window.onload = () => {
   loadFromStorage();
   if (!state.mode) {
-    document.getElementById('modeModal').classList.remove('hidden');
+    showModeModal();
+  } else if (!state.gameStarted) {
+    showPlayerSetup();
   } else {
-    document.getElementById('modeModal').classList.add('hidden');
     applyMode(state.mode);
     renderAll();
   }
@@ -601,10 +671,36 @@ window.onload = () => {
 function selectMode(mode) {
   state.mode = mode;
   document.getElementById('modeModal').classList.add('hidden');
-  applyMode(mode);
+  showPlayerSetup();
+}
+
+function showModeModal() {
+  document.getElementById('modeModal').classList.remove('hidden');
+  document.getElementById('playerSetupModal').classList.add('hidden');
+  document.getElementById('winnerModal').classList.add('hidden');
+}
+
+function showPlayerSetup() {
+  document.getElementById('playerSetupModal').classList.remove('hidden');
+  document.getElementById('modeModal').classList.add('hidden');
+  renderPlayerSetup();
+}
+
+function startGame() {
+  if (state.players.length < 2) { showToast('Add at least 2 players.','error'); return; }
+  state.gameStarted = true;
+  // Re-assign colorIdx by current order so color 0 = player 1 always
+  state.players.forEach((p,i) => p.colorIdx = i);
+  state.activePlayerId = state.players[0].id;
+  state.turnScore=0; state.ptHistory=[]; state.round=1;
+  state.inLastLap=false; state.lastLapTriggerIdx=-1; state.lastLapFinishedPlayers=0;
+  state.gameHistory=[]; state.snapshots=[];
+  document.getElementById('playerSetupModal').classList.add('hidden');
+  applyMode(state.mode);
   resetDiceState();
   renderAll();
   saveToStorage();
+  showToast('Game started! Good luck 🎲');
 }
 
 function applyMode(mode) {
@@ -1063,7 +1159,7 @@ function bankTurnScore() {
   player.score += banked;
   player.turns++;
   player.history.push({turn:state.round,pts:banked,type:'bank'});
-  state.gameHistory.unshift({who:player.name,colorIdx:player.colorIdx,pts:banked,turn:player.turns,farkle:false});
+  state.gameHistory.unshift({who:player.name,emoji:player.emoji||'',colorIdx:player.colorIdx,pts:banked,turn:player.turns,farkle:false});
   state.turnScore = 0; state.ptHistory = [];
 
   if (!state.inLastLap && player.score >= SETTINGS.target) {
@@ -1097,7 +1193,7 @@ function triggerFarkle() {
   saveSnapshot();
   player.turns++;
   player.history.push({turn:state.round,pts:0,type:'farkle'});
-  state.gameHistory.unshift({who:player.name,colorIdx:player.colorIdx,pts:0,turn:player.turns,farkle:true});
+  state.gameHistory.unshift({who:player.name,emoji:player.emoji||'',colorIdx:player.colorIdx,pts:0,turn:player.turns,farkle:true});
   state.turnScore = 0; state.ptHistory = [];
   if (state.inLastLap && activeIdx()!==state.lastLapTriggerIdx) state.lastLapFinishedPlayers++;
   renderAll();
@@ -1113,7 +1209,7 @@ function confirmFarkleAndAdvance() {
   saveSnapshot();
   player.turns++;
   player.history.push({turn:state.round,pts:0,type:'farkle'});
-  state.gameHistory.unshift({who:player.name,colorIdx:player.colorIdx,pts:0,turn:player.turns,farkle:true});
+  state.gameHistory.unshift({who:player.name,emoji:player.emoji||'',colorIdx:player.colorIdx,pts:0,turn:player.turns,farkle:true});
   state.turnScore = 0; state.ptHistory = [];
   state.farklePending = false;
   if (state.inLastLap && activeIdx()!==state.lastLapTriggerIdx) state.lastLapFinishedPlayers++;
@@ -1177,6 +1273,125 @@ function undoLastAction() {
   }
 }
 
+
+// ─────────────────────────────────────────────────────────
+// PLAYER SETUP MODAL
+// ─────────────────────────────────────────────────────────
+const EMOJIS = {
+  men:        ['👨','👴','🧔','👨‍🦱','👨‍🦲','👨‍🦳','🕵️','🧙‍♂️','🤴','👮‍♂️','🥷','🤠','🧛‍♂️','🤡','👹','🤖'],
+  women:      ['👩','👵','👩‍🦱','👩‍🦳','👩‍🦲','🧕','👸','🧝‍♀️','🧙‍♀️','🦸‍♀️','🧟‍♀️','🧜‍♀️','🧛‍♀️','🤶','💃','🧚‍♀️'],
+  expressions:['😎','🤓','😈','👿','💀','🎭','🤪','🥸','🤑','😤','🫡','🤯','🥶','🤢','😱','🤭'],
+};
+let _emojiTargetId = null;
+
+function renderPlayerSetup() {
+  // Mode tag
+  const tag = document.getElementById('setupModeTag');
+  if (tag) tag.textContent = state.mode === 'tracker' ? '📋 Score Tracker' : '🎲 Dice Game';
+
+  // Player list
+  const list = document.getElementById('setupPlayerList');
+  list.innerHTML = state.players.map((p,i) => {
+    const c = pc(i % COLORS.length);
+    const isFirst = i === 0, isLast = i === state.players.length - 1;
+    const canDelete = state.players.length > 2;
+    return `<div class="flex items-center space-x-3 bg-slate-950/60 border border-slate-800 rounded-xl px-3 py-2.5">
+      <!-- Avatar / emoji picker trigger -->
+      <button onclick="openEmojiPicker(${p.id})"
+        class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-dashed border-slate-700 hover:border-amber-500/60 transition ${p.emoji?'text-xl':'text-xs font-black'}"
+        style="background:${c.bg};color:${c.text}" title="Pick emoji">
+        ${p.emoji || ini(p.name)}
+      </button>
+      <!-- Name input -->
+      <input type="text" value="${p.name}" maxlength="18"
+        oninput="updatePlayerName(${p.id},this.value)"
+        onkeydown="if(event.key==='Enter')this.blur()"
+        class="flex-1 bg-transparent text-sm font-semibold text-slate-100 outline-none border-b border-transparent focus:border-amber-500/60 transition pb-0.5 min-w-0">
+      <!-- Reorder -->
+      <div class="flex flex-col space-y-0.5 flex-shrink-0">
+        <button onclick="movePlayer(${p.id},-1)" ${isFirst?'disabled':''} class="w-5 h-5 rounded flex items-center justify-center text-slate-500 hover:text-amber-400 disabled:opacity-20 transition text-[10px]">▲</button>
+        <button onclick="movePlayer(${p.id},+1)" ${isLast?'disabled':''} class="w-5 h-5 rounded flex items-center justify-center text-slate-500 hover:text-amber-400 disabled:opacity-20 transition text-[10px]">▼</button>
+      </div>
+      <!-- Delete -->
+      <button onclick="setupDeletePlayer(${p.id})" ${!canDelete?'disabled':''} class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition disabled:opacity-20 flex-shrink-0">
+        <i class="fa-solid fa-trash-can text-[10px]"></i>
+      </button>
+    </div>`;
+  }).join('');
+
+  // Start button state
+  const btn = document.getElementById('startGameBtn');
+  if (btn) btn.disabled = state.players.length < 2;
+}
+
+function setupAddPlayer() {
+  const inp = document.getElementById('setupNewName');
+  const name = inp.value.trim();
+  if (!name) { showToast('Enter a player name.','error'); return; }
+  state.players.push({id:state.nextId++,name,emoji:'',colorIdx:state.players.length%COLORS.length,score:0,turns:0,history:[]});
+  inp.value = '';
+  renderPlayerSetup();
+  showToast(`${name} added!`);
+}
+
+function setupDeletePlayer(id) {
+  if (state.players.length <= 2) { showToast('Need at least 2 players.','error'); return; }
+  state.players = state.players.filter(p => p.id !== id);
+  renderPlayerSetup();
+}
+
+function updatePlayerName(id, name) {
+  const p = state.players.find(p => p.id === id);
+  if (p) p.name = name.trim() || p.name;
+}
+
+function movePlayer(id, dir) {
+  const idx = state.players.findIndex(p => p.id === id);
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= state.players.length) return;
+  const tmp = state.players[idx];
+  state.players[idx] = state.players[newIdx];
+  state.players[newIdx] = tmp;
+  renderPlayerSetup();
+}
+
+// ─────────────────────────────────────────────────────────
+// EMOJI PICKER
+// ─────────────────────────────────────────────────────────
+function openEmojiPicker(playerId) {
+  _emojiTargetId = playerId;
+  const player = state.players.find(p => p.id === playerId);
+  // Populate emoji grids
+  ['men','women','expressions'].forEach(cat => {
+    document.getElementById('emoji' + cat.charAt(0).toUpperCase() + cat.slice(1)).innerHTML =
+      EMOJIS[cat].map(e =>
+        `<button onclick="selectEmoji('${e}')"
+          class="w-9 h-9 rounded-lg text-xl flex items-center justify-center transition hover:bg-slate-700 active:scale-90 ${player&&player.emoji===e?'bg-amber-500/20 ring-1 ring-amber-500':'bg-slate-800'}"
+        >${e}</button>`
+      ).join('');
+  });
+  document.getElementById('emojiPickerModal').classList.remove('hidden');
+}
+
+function closeEmojiPicker() {
+  document.getElementById('emojiPickerModal').classList.add('hidden');
+  _emojiTargetId = null;
+}
+
+function selectEmoji(emoji) {
+  const p = state.players.find(p => p.id === _emojiTargetId);
+  if (p) p.emoji = emoji;
+  closeEmojiPicker();
+  renderPlayerSetup();
+}
+
+function clearEmoji() {
+  const p = state.players.find(p => p.id === _emojiTargetId);
+  if (p) p.emoji = '';
+  closeEmojiPicker();
+  renderPlayerSetup();
+}
+
 // ─────────────────────────────────────────────────────────
 // PLAYER MANAGEMENT
 // ─────────────────────────────────────────────────────────
@@ -1190,7 +1405,7 @@ function handleAddPlayer() {
   const name = document.getElementById('newPlayerNameInput').value.trim();
   if (!name) { showToast('Enter a name.','error'); return; }
   saveSnapshot();
-  state.players.push({id:state.nextId++,name,colorIdx:state.players.length%COLORS.length,score:0,turns:0,history:[]});
+  state.players.push({id:state.nextId++,name,emoji:'',colorIdx:state.players.length%COLORS.length,score:0,turns:0,history:[]});
   if (state.players.length===1) state.activePlayerId=state.players[0].id;
   closeAddPlayerModal(); renderAll(); showToast(`${name} added!`);
 }
@@ -1208,16 +1423,13 @@ function deletePlayer(id) {
 // ─────────────────────────────────────────────────────────
 function confirmNewGame() {
   if (!confirm('Start a new game? All scores will be reset.')) return;
-  saveSnapshot();
   state.players.forEach(p=>{p.score=0;p.turns=0;p.history=[];});
   state.turnScore=0;state.ptHistory=[];state.round=1;
   state.inLastLap=false;state.lastLapTriggerIdx=-1;state.lastLapFinishedPlayers=0;
-  state.gameHistory=[];state.snapshots=[];state.mode=null;
-  if(state.players.length) state.activePlayerId=state.players[0].id;
+  state.gameHistory=[];state.snapshots=[];state.mode=null;state.gameStarted=false;
   resetDiceState();
-  // Show mode selector
-  document.getElementById('modeModal').classList.remove('hidden');
-  renderAll(); showToast('New game started!');
+  showModeModal();
+  renderAll();
 }
 
 // ─────────────────────────────────────────────────────────
@@ -1252,7 +1464,7 @@ function showWinner() {
     const c=pc(p.colorIdx);
     const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`;
     return `<div class="flex items-center justify-between py-1.5 px-3 rounded-lg" style="background:${c.bg}">
-      <div class="flex items-center space-x-2"><span class="text-sm">${medal}</span><span class="text-sm font-bold" style="color:${c.text}">${p.name}</span></div>
+      <div class="flex items-center space-x-2"><span class="text-sm">${medal}</span><span class="text-sm font-bold" style="color:${c.text}">${p.emoji?p.emoji+' ':''}{p.name}</span></div>
       <span class="text-sm font-black" style="color:${c.text}">${p.score.toLocaleString()} pts</span>
     </div>`;
   }).join('');
@@ -1264,11 +1476,10 @@ function startNewGameFromWinner() {
   state.players.forEach(p=>{p.score=0;p.turns=0;p.history=[];});
   state.turnScore=0;state.ptHistory=[];state.round=1;
   state.inLastLap=false;state.lastLapTriggerIdx=-1;state.lastLapFinishedPlayers=0;
-  state.gameHistory=[];state.snapshots=[];state.mode=null;
-  if(state.players.length) state.activePlayerId=state.players[0].id;
+  state.gameHistory=[];state.snapshots=[];state.mode=null;state.gameStarted=false;
   resetDiceState();
-  document.getElementById('modeModal').classList.remove('hidden');
-  renderAll(); showToast('New game started!');
+  showModeModal();
+  renderAll();
 }
 function continueWithNewTarget() {
   document.getElementById('winnerModal').classList.add('hidden');
@@ -1301,15 +1512,13 @@ function renderTurnOrder() {
   el.innerHTML=state.players.map((p,i)=>{
     const c=pc(p.colorIdx), isActive=p.id===state.activePlayerId;
     return `<div class="flex items-center space-x-3 px-4 py-2.5 ${isActive?'bg-slate-800/60':''} transition">
-      <div class="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black flex-shrink-0" style="background:${c.bg};color:${c.text}">${ini(p.name)}</div>
+      <div class="w-7 h-7 rounded-full flex items-center justify-center ${p.emoji?'text-base':'text-[11px] font-black'} flex-shrink-0" style="background:${c.bg};color:${c.text}">${avatar(p)}</div>
       <div class="flex-1 min-w-0">
         <div class="text-xs font-semibold truncate ${isActive?'text-slate-100':'text-slate-400'}">${p.name}</div>
         <div class="text-[10px] text-slate-600">Player ${i+1}</div>
       </div>
       ${isActive?`<span class="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0" style="background:${c.bg};color:${c.text}">▶ now</span>`:''}
-      <button onclick="event.stopPropagation();deletePlayer(${p.id})" class="w-6 h-6 rounded-lg flex items-center justify-center text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition flex-shrink-0 active:scale-95" title="Remove">
-        <i class="fa-solid fa-trash-can text-[10px]"></i>
-      </button>
+
     </div>`;
   }).join('');
 }
@@ -1321,11 +1530,11 @@ function renderLeaderboard() {
     const reached=p.score>=SETTINGS.target,isActive=p.id===state.activePlayerId;
     const medal=rank===0?'🥇':rank===1?'🥈':rank===2?'🥉':`<span class="text-slate-500 text-[10px]">#${rank+1}</span>`;
     return `<div class="px-4 py-3 flex items-center space-x-3 ${isActive?'bg-slate-800/40':''} transition">
-      <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0" style="background:${c.bg};color:${c.text};${isActive||reached?'box-shadow:0 0 0 2px '+c.border:''}">${ini(p.name)}</div>
+      <div class="w-9 h-9 rounded-full flex items-center justify-center ${p.emoji?'text-xl':'text-xs font-black'} flex-shrink-0" style="background:${c.bg};color:${c.text};${isActive||reached?'box-shadow:0 0 0 2px '+c.border:''}">${avatar(p)}</div>
       <div class="flex-1 min-w-0">
         <div class="flex items-center space-x-1.5 mb-1">
           <span class="text-sm">${medal}</span>
-          <span class="text-xs font-semibold truncate ${isActive?'text-slate-100':'text-slate-400'}">${p.name}</span>
+          <span class="text-xs font-semibold truncate ${isActive?'text-slate-100':'text-slate-400'}">${p.emoji?p.emoji+' ':''}{p.name}</span>
           ${reached?'<span class="text-[10px] text-amber-400">🏁</span>':''}
         </div>
         <div class="h-1.5 rounded-full overflow-hidden bg-slate-800">
@@ -1347,7 +1556,7 @@ function renderRecentTurns() {
   el.innerHTML=recent.map(h=>{
     const c=pc(h.colorIdx);
     return `<div class="flex items-center space-x-3 px-4 py-2.5">
-      <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0" style="background:${c.bg};color:${c.text}">${ini(h.who)}</div>
+      <div class="w-6 h-6 rounded-full flex items-center justify-center ${h.emoji?'text-sm':'text-[10px] font-black'} flex-shrink-0" style="background:${c.bg};color:${c.text}">${h.emoji||ini(h.who)}</div>
       <span class="text-xs text-slate-400 flex-1">${h.who} · T${h.turn}</span>
       <span class="text-xs font-bold ${h.farkle?'text-red-400':''}" style="${!h.farkle?'color:'+c.text:''}">${h.farkle?'Farkle!':'+'+h.pts.toLocaleString()}</span>
     </div>`;
@@ -1357,7 +1566,7 @@ function renderRecentTurns() {
 function renderActiveBanner() {
   const player=activePlayer(); if(!player) return;
   const c=pc(player.colorIdx);
-  document.getElementById('activePlayerName').textContent=player.name;
+  document.getElementById('activePlayerName').textContent = (player.emoji ? player.emoji + ' ' : '') + player.name;
   document.getElementById('activePlayerName').style.color=c.text;
   document.getElementById('activeDot').style.background=c.bar;
   document.getElementById('activePlayerScore').textContent=`${player.score.toLocaleString()} pts`;
