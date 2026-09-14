@@ -9,6 +9,10 @@
 <title>Farkle Master Pro</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>">
 <script src="https://cdn.tailwindcss.com"></script>
+<!-- Firebase SDK (compat version — no import needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -88,6 +92,12 @@
     </div>
   </div>
   <div class="flex items-center space-x-2">
+    <button onclick="openHofViewModal()"
+      style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:10px;background:rgba(30,41,59,0.8);border:1px solid rgba(51,65,85,0.6);color:#cbd5e1;font-size:12px;font-weight:600;cursor:pointer;transition:background 0.15s;"
+      onmouseover="this.style.background='#334155'" onmouseout="this.style.background='rgba(30,41,59,0.8)'">
+      <i class="fa-solid fa-crown" style="color:#f59e0b"></i>
+      <span class="hidden sm:inline">Hall of Fame</span>
+    </button>
     <button onclick="openHistoryModal()"
       style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:10px;background:rgba(30,41,59,0.8);border:1px solid rgba(51,65,85,0.6);color:#cbd5e1;font-size:12px;font-weight:600;cursor:pointer;transition:background 0.15s;"
       onmouseover="this.style.background='#334155'" onmouseout="this.style.background='rgba(30,41,59,0.8)'">
@@ -157,6 +167,19 @@
       </div>
       <div id="recentTurns" class="divide-y divide-slate-800/60 overflow-y-auto" style="max-height:480px">
         <p class="text-xs text-slate-500 px-4 py-3 italic">No turns yet.</p>
+      </div>
+    </div>
+
+    <!-- Hall of Fame -->
+    <div class="bg-slate-900/90 border border-slate-800/90 rounded-2xl overflow-hidden shadow-xl">
+      <div class="px-4 py-2.5 border-b border-slate-800 bg-slate-950/40 flex items-center justify-between">
+        <h2 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
+          <i class="fa-solid fa-crown text-amber-400 text-xs"></i><span>Hall of Fame</span>
+        </h2>
+        <span class="text-[10px] text-slate-600">Top 10 · Target 10,000</span>
+      </div>
+      <div id="hofList" class="divide-y divide-slate-800/60">
+        <p class="text-xs text-slate-600 px-4 py-3 italic">Loading…</p>
       </div>
     </div>
 
@@ -643,6 +666,44 @@
   </div>
 </div>
 
+<!-- Hall of Fame View Modal -->
+<div id="hofViewModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 hidden">
+  <div class="bg-slate-900 border border-amber-500/20 rounded-3xl w-full max-w-sm shadow-2xl flex flex-col max-h-[85vh]">
+    <div class="px-6 pt-6 pb-4 border-b border-slate-800 flex-shrink-0 flex items-center justify-between">
+      <div>
+        <h2 class="text-lg font-black text-slate-100 flex items-center space-x-2">
+          <i class="fa-solid fa-crown text-amber-400"></i><span>Hall of Fame</span>
+        </h2>
+        <p class="text-xs text-slate-500 mt-0.5">Top 10 all-time · Target 10,000</p>
+      </div>
+      <button onclick="closeHofViewModal()" class="text-slate-400 hover:text-white transition">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <div class="flex-1 overflow-y-auto" id="hofViewList">
+      <p class="text-xs text-slate-600 px-4 py-6 italic text-center">Loading…</p>
+    </div>
+  </div>
+</div>
+
+<!-- Hall of Fame Submission Modal -->
+<div id="hofModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 hidden">
+  <div class="bg-slate-900 border border-amber-500/30 rounded-3xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+    <div class="text-center">
+      <div class="text-4xl mb-2">🏆</div>
+      <h3 class="text-lg font-black text-slate-100">Submit to Hall of Fame?</h3>
+      <p class="text-xs text-slate-500 mt-1">Target was 10,000 — eligible for the all-time leaderboard!</p>
+    </div>
+    <div id="hofPlayersList" class="space-y-2"></div>
+    <div class="flex space-x-3">
+      <button onclick="closeHofModal()" class="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-semibold text-sm transition">Skip</button>
+      <button onclick="submitHofScores()" class="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-sm transition shadow-lg shadow-amber-500/20">
+        <i class="fa-solid fa-crown mr-1.5"></i>Submit!
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="toast" class="fixed top-20 right-4 z-50 transform -translate-y-40 opacity-0 transition-all duration-300 bg-slate-900 border border-slate-700 text-slate-100 px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 pointer-events-none max-w-xs">
   <div id="toastIcon" class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm flex-shrink-0"><i class="fa-solid fa-check"></i></div>
@@ -711,6 +772,7 @@ let archive = [];
 // ─────────────────────────────────────────────────────────
 window.onload = () => {
   loadFromStorage();
+  initFirebase();
   if (state.gameStarted && state.mode) {
     // Active game in progress — restore exactly where we left off
     applyMode(state.mode);
@@ -841,18 +903,19 @@ function applyMode(mode) {
 // STORAGE
 // ─────────────────────────────────────────────────────────
 function saveToStorage() {
-  try { localStorage.setItem('farkle_v5', JSON.stringify({state, SETTINGS, archive})); } catch(e){}
+  try { localStorage.setItem('farkle_v6', JSON.stringify({state, SETTINGS, archive})); } catch(e){}
 }
 // Auto-save on page close/refresh so mid-turn state is preserved
 window.addEventListener('beforeunload', () => { saveToStorage(); });
 function loadFromStorage() {
   try {
-    const raw = localStorage.getItem('farkle_v5');
+    // Try current key first, fall back to v5 for migration
+    const raw = localStorage.getItem('farkle_v6') || localStorage.getItem('farkle_v5');
     if (!raw) return;
     const saved = JSON.parse(raw);
     if (saved.state) {
       Object.assign(state, saved.state);
-      // Ensure new fields added after old saves are always present
+      // Ensure fields added in later versions are always present
       if (typeof state.gameStarted === 'undefined') state.gameStarted = false;
       if (typeof state.mode === 'undefined') state.mode = null;
       if (typeof state.currentArchiveId === 'undefined') state.currentArchiveId = null;
@@ -862,6 +925,8 @@ function loadFromStorage() {
     }
     if (saved.SETTINGS) Object.assign(SETTINGS, saved.SETTINGS);
     if (Array.isArray(saved.archive)) archive = saved.archive;
+    // Immediately re-save under v6 key so migration sticks
+    saveToStorage();
   } catch(e){}
 }
 
@@ -1889,6 +1954,8 @@ function showWinner() {
   }).join('');
   document.getElementById('newTargetLabel').textContent=(SETTINGS.target+5000).toLocaleString();
   document.getElementById('winnerModal').classList.remove('hidden');
+  // Offer HOF submission for 10,000-target games
+  setTimeout(() => maybeShowHofModal(sorted), 800);
 }
 function startNewGameFromWinner() {
   document.getElementById('winnerModal').classList.add('hidden');
@@ -2104,6 +2171,156 @@ function showToast(msg,type='success') {
   toast.classList.add('translate-y-0','opacity-100');
   _tt=setTimeout(()=>{toast.classList.add('-translate-y-40','opacity-0');toast.classList.remove('translate-y-0','opacity-100');},3000);
 }
+// ─────────────────────────────────────────────────────────
+// FIREBASE — HALL OF FAME
+// ─────────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyAT4hx1QYv0QMAJ1zgHT6XOzGhelR8aStE",
+  authDomain: "farkle-master.firebaseapp.com",
+  databaseURL: "https://farkle-master-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "farkle-master",
+  storageBucket: "farkle-master.firebasestorage.app",
+  messagingSenderId: "477679184183",
+  appId: "1:477679184183:web:22d1ebba2840f58049d2b2"
+};
+
+let db = null;
+let _hofPendingPlayers = [];
+
+function initFirebase() {
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+    // Sign in anonymously — required to write to the database
+    firebase.auth().signInAnonymously()
+      .then(() => { console.log('Firebase: signed in anonymously'); })
+      .catch(e => console.warn('Firebase auth error:', e));
+    // Listen for auth state — start HOF listener once auth is ready
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) listenHof();
+    });
+  } catch(e) {
+    console.warn('Firebase init failed:', e);
+    document.getElementById('hofList').innerHTML =
+      '<p class="text-xs text-slate-600 px-4 py-3 italic">Leaderboard unavailable.</p>';
+  }
+}
+
+// ── Listen to top 10 scores live ─────────────────────────
+function openHofViewModal() {
+  document.getElementById('hofViewModal').classList.remove('hidden');
+  // Populate from live hofList content or re-render
+  const src = document.getElementById('hofList');
+  const dst = document.getElementById('hofViewList');
+  if (src) dst.innerHTML = src.innerHTML;
+}
+function closeHofViewModal() {
+  document.getElementById('hofViewModal').classList.add('hidden');
+}
+
+function listenHof() {
+  if (!db) return;
+  db.ref('leaderboard').orderByChild('score').limitToLast(10).on('value', snap => {
+    const entries = [];
+    snap.forEach(child => entries.push({id: child.key, ...child.val()}));
+    entries.sort((a,b) => b.score - a.score || a.turns - b.turns);
+    renderHof(entries);
+  }, err => {
+    console.warn('HOF read error:', err);
+    document.getElementById('hofList').innerHTML =
+      '<p class="text-xs text-slate-600 px-4 py-3 italic">Leaderboard unavailable.</p>';
+  });
+}
+
+function renderHof(entries) {
+  const el = document.getElementById('hofList');
+  if (!entries.length) {
+    el.innerHTML = '<p class="text-xs text-slate-600 px-4 py-3 italic">No scores yet — be the first!</p>';
+    return;
+  }
+  el.innerHTML = entries.map((e, i) => {
+    const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`<span style="color:#64748b;font-size:11px">#${i+1}</span>`;
+    const date = new Date(e.timestamp).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:0.5px solid rgba(51,65,85,0.4)">
+      <span style="font-size:16px;flex-shrink:0">${medal}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.emoji?e.emoji+' ':''}${e.name}</div>
+        <div style="font-size:10px;color:#475569">${e.turns} turns · ${date}</div>
+      </div>
+      <span style="font-size:13px;font-weight:800;color:#f59e0b;flex-shrink:0">${Number(e.score).toLocaleString()}</span>
+    </div>`;
+  }).join('') + '<div style="height:1px"></div>';
+  // Mirror to view modal if it's open
+  const viewModal = document.getElementById('hofViewModal');
+  const hofViewList = document.getElementById('hofViewList');
+  if (viewModal && !viewModal.classList.contains('hidden') && hofViewList) {
+    hofViewList.innerHTML = el.innerHTML;
+  }
+}
+
+// ── Show HOF submission modal after a 10,000-target game ─
+function maybeShowHofModal(sortedPlayers) {
+  if (SETTINGS.target !== 10000) return; // only for standard 10k games
+  _hofPendingPlayers = sortedPlayers.filter(p => p.score > 0);
+  if (!_hofPendingPlayers.length) return;
+
+  const listEl = document.getElementById('hofPlayersList');
+  listEl.innerHTML = '';
+  _hofPendingPlayers.forEach((p, i) => {
+    const c = pc(p.colorIdx);
+    const row = document.createElement('div');
+    row.style.cssText = `display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:${c.bg};`;
+    row.innerHTML = `
+      <span style="font-size:20px;flex-shrink:0">${p.emoji||ini(p.name)}</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:${c.text}">${p.name}</div>
+        <div style="font-size:11px;color:${c.text};opacity:0.7">${p.score.toLocaleString()} pts · ${p.turns} turns</div>
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+        <input type="checkbox" id="hof_check_${p.id}" checked style="accent-color:#f59e0b;width:16px;height:16px">
+        <span style="font-size:11px;color:${c.text}">Submit</span>
+      </label>`;
+    listEl.appendChild(row);
+  });
+
+  document.getElementById('hofModal').classList.remove('hidden');
+}
+
+function closeHofModal() {
+  document.getElementById('hofModal').classList.add('hidden');
+}
+
+async function submitHofScores() {
+  if (!db) { showToast('Leaderboard unavailable.','error'); closeHofModal(); return; }
+  const user = firebase.auth().currentUser;
+  if (!user) { showToast('Not authenticated — try again.','error'); closeHofModal(); return; }
+  const toSubmit = _hofPendingPlayers.filter(p => {
+    const cb = document.getElementById(`hof_check_${p.id}`);
+    return cb && cb.checked;
+  });
+  if (!toSubmit.length) { closeHofModal(); return; }
+
+  try {
+    for (const p of toSubmit) {
+      const entry = {
+        name: p.name,
+        emoji: p.emoji || '',
+        score: p.score,
+        turns: p.turns,
+        timestamp: Date.now(),
+      };
+      await db.ref('leaderboard').push(entry);
+    }
+    showToast('Scores submitted to Hall of Fame! 🏆');
+  } catch(e) {
+    console.error('HOF submit error:', e);
+    showToast('Failed to submit scores.','error');
+  }
+  closeHofModal();
+}
+
+// Call initFirebase after page loads
+
 </script>
 </body>
 </html>
