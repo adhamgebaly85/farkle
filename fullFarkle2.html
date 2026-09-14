@@ -2283,22 +2283,26 @@ async function autoSubmitHof(sortedPlayers) {
   }
   const toSubmit = sortedPlayers.filter(p => p.score > 0);
   if (!toSubmit.length) return;
-  try {
-    const ts = Date.now();
-    // Push all entries in parallel
-    await Promise.all(toSubmit.map(p =>
-      db.ref(hofPath()).push({
+  const ts = Date.now();
+  let submitted = 0;
+  for (let i = 0; i < toSubmit.length; i++) {
+    const p = toSubmit[i];
+    try {
+      await db.ref(hofPath()).push({
         name: p.name,
         emoji: p.emoji || '',
         score: p.score,
         turns: p.turns,
-        timestamp: ts,
-      }).catch(e => console.error('HOF push failed for', p.name, e))
-    ));
-    showToast('Scores saved to Hall of Fame! 🏆');
-  } catch(e) {
-    console.error('HOF submit error:', e);
+        timestamp: ts + i, // slight offset so entries are unique
+      });
+      submitted++;
+    } catch(e) {
+      console.error('HOF push failed for', p.name, ':', e.code, e.message);
+    }
+    // Small delay between writes to avoid Firebase throttling
+    if (i < toSubmit.length - 1) await new Promise(r => setTimeout(r, 200));
   }
+  if (submitted > 0) showToast(`${submitted} score${submitted>1?'s':''} saved to Hall of Fame! 🏆`);
 }
 
 // Call initFirebase after page loads
