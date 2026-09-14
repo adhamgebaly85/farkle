@@ -775,8 +775,10 @@ function renderHistoryPicker(mode) {
 
     // Delete button overlay (bottom right of card)
     const pickerDel = document.createElement('button');
-    pickerDel.className = 'mt-2 flex items-center space-x-1 text-[10px] text-slate-600 hover:text-red-400 transition';
-    pickerDel.innerHTML = '<i class="fa-solid fa-trash-can text-[9px]"></i><span>Delete from history</span>';
+    pickerDel.style.cssText = 'margin-top:8px;display:flex;align-items:center;gap:4px;font-size:10px;color:#475569;background:none;border:none;cursor:pointer;transition:color 0.15s;padding:2px 0;';
+    pickerDel.innerHTML = '<i class="fa-solid fa-trash-can" style="font-size:9px"></i><span>Delete from history</span>';
+    pickerDel.addEventListener('mouseover', () => pickerDel.style.color='#f87171');
+    pickerDel.addEventListener('mouseout',  () => pickerDel.style.color='#475569');
     pickerDel.addEventListener('click', (e) => { e.stopPropagation(); deleteArchiveEntry(entry.id, 'picker'); });
     card.appendChild(pickerDel);
 
@@ -1551,8 +1553,10 @@ function renderHistoryModal() {
     resumeBtn.addEventListener('click', () => resumeGame(entry.id));
 
     const delBtn = document.createElement('button');
-    delBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 hover:border-red-500/40 transition active:scale-95';
-    delBtn.innerHTML = '<i class="fa-solid fa-trash-can text-[10px] mr-1"></i>Delete';
+    delBtn.style.cssText = 'padding:6px 10px;border-radius:8px;font-size:11px;font-weight:600;background:rgba(239,68,68,0.1);color:#f87171;border:1px solid rgba(239,68,68,0.25);cursor:pointer;transition:background 0.15s;display:flex;align-items:center;gap:5px;white-space:nowrap;';
+    delBtn.innerHTML = '<i class="fa-solid fa-trash-can" style="font-size:10px"></i><span>Delete</span>';
+    delBtn.addEventListener('mouseover', () => delBtn.style.background='rgba(239,68,68,0.2)');
+    delBtn.addEventListener('mouseout',  () => delBtn.style.background='rgba(239,68,68,0.1)');
     delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteArchiveEntry(entry.id, 'history'); });
 
     btnGroup.appendChild(resumeBtn);
