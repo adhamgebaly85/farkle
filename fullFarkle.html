@@ -655,10 +655,12 @@ let state = {
 // ─────────────────────────────────────────────────────────
 window.onload = () => {
   loadFromStorage();
-  if (!state.mode) {
+  // Always start fresh if gameStarted is not explicitly true
+  if (!state.gameStarted || !state.mode) {
+    // Reset to a clean pre-game state but keep player list & names
+    state.mode = null;
+    state.gameStarted = false;
     showModeModal();
-  } else if (!state.gameStarted) {
-    showPlayerSetup();
   } else {
     applyMode(state.mode);
     renderAll();
@@ -715,14 +717,22 @@ function applyMode(mode) {
 // STORAGE
 // ─────────────────────────────────────────────────────────
 function saveToStorage() {
-  try { localStorage.setItem('farkle_v4', JSON.stringify({state, SETTINGS})); } catch(e){}
+  try { localStorage.setItem('farkle_v5', JSON.stringify({state, SETTINGS})); } catch(e){}
 }
 function loadFromStorage() {
   try {
-    const raw = localStorage.getItem('farkle_v4');
+    const raw = localStorage.getItem('farkle_v5');
     if (!raw) return;
     const saved = JSON.parse(raw);
-    if (saved.state)    Object.assign(state, saved.state);
+    if (saved.state) {
+      Object.assign(state, saved.state);
+      // Ensure new fields added after old saves are always present
+      if (typeof state.gameStarted === 'undefined') state.gameStarted = false;
+      if (typeof state.mode === 'undefined') state.mode = null;
+      state.players.forEach(p => {
+        if (typeof p.emoji === 'undefined') p.emoji = '';
+      });
+    }
     if (saved.SETTINGS) Object.assign(SETTINGS, saved.SETTINGS);
   } catch(e){}
 }
