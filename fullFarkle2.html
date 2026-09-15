@@ -477,13 +477,21 @@
         </div>
       </button>
     </div>
-    <!-- Hall of Fame link -->
-    <button onclick="openHofViewModal()"
-      style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:12px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);color:#f59e0b;font-size:13px;font-weight:700;cursor:pointer;transition:background 0.15s;"
-      onmouseover="this.style.background='rgba(245,158,11,0.12)'" onmouseout="this.style.background='rgba(245,158,11,0.06)'">
-      <i class="fa-solid fa-crown" style="font-size:12px"></i>
-      <span>View Hall of Fame</span>
-    </button>
+    <!-- Bottom action buttons -->
+    <div style="display:flex;gap:10px;">
+      <button onclick="openSettingsModal()"
+        style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:12px;background:rgba(30,41,59,0.8);border:1px solid rgba(51,65,85,0.5);color:#cbd5e1;font-size:13px;font-weight:700;cursor:pointer;transition:background 0.15s;"
+        onmouseover="this.style.background='#334155'" onmouseout="this.style.background='rgba(30,41,59,0.8)'">
+        <i class="fa-solid fa-gear" style="font-size:12px;color:#f59e0b"></i>
+        <span>Settings</span>
+      </button>
+      <button onclick="openHofViewModal()"
+        style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:12px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);color:#f59e0b;font-size:13px;font-weight:700;cursor:pointer;transition:background 0.15s;"
+        onmouseover="this.style.background='rgba(245,158,11,0.12)'" onmouseout="this.style.background='rgba(245,158,11,0.06)'">
+        <i class="fa-solid fa-crown" style="font-size:12px"></i>
+        <span>Hall of Fame</span>
+      </button>
+    </div>
   </div>
 </div>
 <div id="addPlayerModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
